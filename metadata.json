@@ -1,0 +1,6 @@
+{
+  "name": "어디갈까 (WhereWeGo)",
+  "description": "8인 트레킹 동호회/소모임을 위한 구글 맵 연동 플랜 비교, AI 코스 추천 및 카카오톡 간편 의사결정 플랫폼",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
