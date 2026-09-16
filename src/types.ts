@@ -40,6 +40,8 @@ export interface TrekPlan {
   isAiGenerated?: boolean;
   aiPromptUsed?: string;
   isPublished: boolean;
+  startPoint?: string; // 들머리 (출발 지점)
+  endPoint?: string; // 날머리 (도착 지점)
   totalDistance: string; // e.g. "12.5km"
   totalDuration: string; // e.g. "4시간 30분"
   elevationGain?: string; // e.g. "+550m"

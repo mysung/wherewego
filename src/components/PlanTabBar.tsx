@@ -30,7 +30,7 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
     <div className="bg-white border-b border-slate-200">
       {/* Top row: Tab pills & Action buttons */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 flex flex-col md:flex-row md:items-center justify-between gap-2 overflow-x-auto">
-        {/* Plan Tabs */}
+        {/* Plan Tabs & Add Plan Button */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
           {plans.map((plan, index) => {
             const isActive = plan.id === activePlanId;
@@ -91,6 +91,16 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
               </button>
             );
           })}
+
+          {/* Dedicated + New Plan Button right beside tabs */}
+          <button
+            onClick={onOpenAIGenerator}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-t-xl transition-all shrink-0 cursor-pointer"
+            title="새로운 들머리/날머리 및 코스로 플랜 추가하기"
+          >
+            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">+</span>
+            <span>새 플랜 생성</span>
+          </button>
         </div>
 
         {/* Action Buttons: AI Trek Planner & Fork Plan */}
@@ -118,7 +128,20 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
       <div className="bg-slate-50 border-t border-slate-200/90 py-2 px-3 sm:px-6 text-xs">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           {/* Key Numbers */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-slate-700">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-slate-700">
+            {/* Trailhead (들머리) & Ending (날머리) Badge */}
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+              <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                들머리: {activePlan.startPoint || activePlan.waypoints[0]?.name || '성삼재'}
+              </span>
+              <span className="text-slate-400 text-xs">➔</span>
+              <span className="text-[11px] font-bold text-rose-800 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                날머리: {activePlan.endPoint || activePlan.waypoints[activePlan.waypoints.length - 1]?.name || '원점회귀'}
+              </span>
+            </div>
+
             <div className="flex items-center gap-1.5">
               <Ruler className="w-4 h-4 text-emerald-600" />
               <span className="text-slate-500">총 거리:</span>

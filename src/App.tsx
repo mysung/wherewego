@@ -14,7 +14,7 @@ import { KakaoShareModal } from './components/KakaoShareModal';
 import { ForkPlanModal } from './components/ForkPlanModal';
 import { AddWaypointModal } from './components/AddWaypointModal';
 
-const STORAGE_KEY = 'wherewego_trek_space_v1';
+const STORAGE_KEY = 'wherewego_trek_space_v2';
 
 export default function App() {
   // Load initial space from localStorage or fallback
@@ -196,12 +196,34 @@ export default function App() {
     }
   };
 
-  // AI Plan Created
+  // AI / Manual Plan Created
   const handlePlanCreated = (newPlan: TrekPlan) => {
-    setSpace((prev) => ({
-      ...prev,
-      plans: [...prev.plans, newPlan],
-    }));
+    setSpace((prev) => {
+      const isNamsan = newPlan.title.includes('남산') || (newPlan.startPoint && newPlan.startPoint.includes('남산'));
+      const isBukhansan = newPlan.title.includes('북한산') || (newPlan.startPoint && newPlan.startPoint.includes('북한산'));
+      const isGwanak = newPlan.title.includes('관악산') || (newPlan.startPoint && newPlan.startPoint.includes('관악산'));
+
+      let newDest = prev.destination;
+      let newTitle = prev.title;
+
+      if (isNamsan) {
+        newDest = '서울 남산타워 (둘레길 & N서울타워)';
+        newTitle = '남산타워 힐링 둘레길 8인 트레킹 모임';
+      } else if (isBukhansan) {
+        newDest = '북한산 국립공원 (백운대)';
+        newTitle = '북한산 백운대 정복 8인 트레킹';
+      } else if (isGwanak) {
+        newDest = '관악산 (연주대)';
+        newTitle = '관악산 연주대 8인 트레킹';
+      }
+
+      return {
+        ...prev,
+        destination: newDest,
+        title: newTitle,
+        plans: [...prev.plans, newPlan],
+      };
+    });
     setActivePlanId(newPlan.id);
   };
 

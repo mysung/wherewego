@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Waypoint, TrekPlan, Member } from '../types';
+import L from 'leaflet';
 import {
   MapPin,
   Flag,
@@ -16,7 +17,7 @@ import {
   ThumbsDown,
   MessageSquare,
   Sparkles,
-  Info,
+  Compass,
 } from 'lucide-react';
 
 interface MapViewProps {
@@ -29,6 +30,32 @@ interface MapViewProps {
   onOpenAlternative: (waypoint: Waypoint) => void;
 }
 
+// Tile Layer configurations
+const TILE_LAYERS = {
+  terrain: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    options: {
+      maxZoom: 17,
+      subdomains: ['a', 'b', 'c'],
+      attribution: '© OpenTopoMap, © OpenStreetMap',
+    },
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    options: {
+      maxZoom: 19,
+      attribution: '© Esri, Maxar, Earthstar Geographics',
+    },
+  },
+  standard: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+};
+
 export const MapView: React.FC<MapViewProps> = ({
   plan,
   currentMember,
@@ -39,66 +66,162 @@ export const MapView: React.FC<MapViewProps> = ({
   onOpenAlternative,
 }) => {
   const [mapMode, setMapMode] = useState<'terrain' | 'satellite' | 'standard'>('terrain');
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const waypoints = plan.waypoints;
+  const waypoints = plan.waypoints || [];
   const selectedWaypoint = waypoints.find((w) => w.id === selectedWaypointId);
 
-  // Calculate bounding box for auto fit-bounds on plan change
-  const lats = waypoints.map((w) => w.lat);
-  const lngs = waypoints.map((w) => w.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-
-  // Auto reset pan & zoom when plan changes
+  // Initialize Leaflet Map
   useEffect(() => {
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-  }, [plan.id]);
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-  // Convert GPS (lat, lng) into percentage coordinates inside the bounding box
-  const getCoordinates = (lat: number, lng: number) => {
-    const latSpan = maxLat - minLat || 0.01;
-    const lngSpan = maxLng - minLng || 0.01;
+    // Default center to first waypoint or Seoul Namsan
+    const initialLat = waypoints[0]?.lat || 37.5512;
+    const initialLng = waypoints[0]?.lng || 126.9882;
 
-    // Normalizing with padding
-    const padding = 15; // 15% inner padding
-    const usableWidth = 100 - padding * 2;
-    const usableHeight = 100 - padding * 2;
-
-    const x = padding + ((lng - minLng) / lngSpan) * usableWidth;
-    // Invert lat because higher lat is North (top)
-    const y = 100 - (padding + ((lat - minLat) / latSpan) * usableHeight);
-
-    return { x, y };
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setPanOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+    const map = L.map(mapContainerRef.current, {
+      center: [initialLat, initialLng],
+      zoom: 14,
+      zoomControl: false,
+      attributionControl: false,
     });
-  };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+    // Add Tile Layer
+    const currentConfig = TILE_LAYERS[mapMode];
+    const tileLayer = L.tileLayer(currentConfig.url, currentConfig.options).addTo(map);
+    tileLayerRef.current = tileLayer;
 
+    // Layer group for markers and polyline
+    const layerGroup = L.layerGroup().addTo(map);
+    layerGroupRef.current = layerGroup;
+
+    mapInstanceRef.current = map;
+
+    // Handle container resize
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update Tile Layer when mapMode changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+
+    const config = TILE_LAYERS[mapMode];
+    tileLayerRef.current.setUrl(config.url);
+  }, [mapMode]);
+
+  // Update Markers & Polyline when waypoints, plan, or selectedWaypointId changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const layerGroup = layerGroupRef.current;
+    if (!map || !layerGroup) return;
+
+    // Clear previous markers & polylines
+    layerGroup.clearLayers();
+
+    if (waypoints.length === 0) return;
+
+    const latLngs: [number, number][] = [];
+
+    // Helper for badge color classes
+    const getBadgeClass = (type: string, isStart: boolean, isEnd: boolean, isSelected: boolean) => {
+      let base = '';
+      if (isStart) base = 'bg-emerald-600 text-white border-emerald-300';
+      else if (isEnd) base = 'bg-rose-600 text-white border-rose-300';
+      else if (type === 'REST') base = 'bg-blue-600 text-white border-blue-300';
+      else if (type === 'FOOD') base = 'bg-amber-600 text-white border-amber-300';
+      else if (type === 'VIEW') base = 'bg-purple-600 text-white border-purple-300';
+      else if (type === 'STAY') base = 'bg-indigo-600 text-white border-indigo-300';
+      else base = 'bg-slate-700 text-white border-slate-400';
+
+      if (isSelected) {
+        base += ' ring-4 ring-emerald-400 ring-offset-1 shadow-2xl scale-110';
+      }
+      return base;
+    };
+
+    // Render Markers for each Waypoint
+    waypoints.forEach((wp, idx) => {
+      const isStart = idx === 0;
+      const isEnd = idx === waypoints.length - 1;
+      const isSelected = wp.id === selectedWaypointId;
+
+      latLngs.push([wp.lat, wp.lng]);
+
+      const labelPrefix = isStart ? '🚩 들머리' : isEnd ? '🏁 날머리' : `${idx + 1}`;
+      const badgeClass = getBadgeClass(wp.type, isStart, isEnd, isSelected);
+
+      const customIcon = L.divIcon({
+        className: 'leaflet-trek-marker',
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+        html: `
+          <div style="position: absolute; transform: translate(-50%, -100%); cursor: pointer; white-space: nowrap;">
+            <div class="flex items-center gap-1 px-2.5 py-1 rounded-full shadow-md border-2 font-bold text-xs select-none transition-transform ${badgeClass}">
+              <span class="text-[10px] font-black">${labelPrefix}</span>
+              <span class="max-w-[100px] truncate text-[11px]">${wp.name}</span>
+              ${wp.elevation ? `<span class="text-[9px] opacity-85 font-mono">${wp.elevation}m</span>` : ''}
+              ${wp.upVotes.length > 0 ? `<span class="ml-0.5 bg-black/25 px-1 py-0.2 rounded text-[9px]">👍${wp.upVotes.length}</span>` : ''}
+              ${wp.comments.length > 0 ? `<span class="bg-black/25 px-1 py-0.2 rounded text-[9px]">💬${wp.comments.length}</span>` : ''}
+            </div>
+            <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #1e293b; margin: -1px auto 0 auto; opacity: 0.85;"></div>
+          </div>
+        `,
+      });
+
+      const marker = L.marker([wp.lat, wp.lng], { icon: customIcon, zIndexOffset: isSelected ? 1000 : idx });
+      marker.on('click', () => {
+        onSelectWaypoint(wp.id);
+        map.panTo([wp.lat, wp.lng], { animate: true });
+      });
+
+      layerGroup.addLayer(marker);
+    });
+
+    // Outer glow polyline
+    const glowPolyline = L.polyline(latLngs, {
+      color: mapMode === 'satellite' ? '#34d399' : '#059669',
+      weight: 8,
+      opacity: 0.35,
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    layerGroup.addLayer(glowPolyline);
+
+    // Main dash polyline
+    const mainPolyline = L.polyline(latLngs, {
+      color: mapMode === 'satellite' ? '#10b981' : '#047857',
+      weight: 4.5,
+      opacity: 0.95,
+      dashArray: '8, 8',
+      lineCap: 'round',
+      lineJoin: 'round',
+    });
+    layerGroup.addLayer(mainPolyline);
+
+    // Auto fit bounds to show all waypoints
+    if (latLngs.length > 0) {
+      const bounds = L.latLngBounds(latLngs);
+      map.fitBounds(bounds, { padding: [55, 55], maxZoom: 16 });
+    }
+  }, [waypoints, plan.id, selectedWaypointId, mapMode]);
+
+  // Fit bounds helper
   const fitBounds = () => {
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
+    if (!mapInstanceRef.current || waypoints.length === 0) return;
+    const latLngs: [number, number][] = waypoints.map((w) => [w.lat, w.lng]);
+    mapInstanceRef.current.fitBounds(L.latLngBounds(latLngs), { padding: [55, 55], maxZoom: 16 });
   };
 
   const getSpotIcon = (type: string, isSmall = false) => {
@@ -140,207 +263,72 @@ export const MapView: React.FC<MapViewProps> = ({
     }
   };
 
-  // Generate SVG path for waypoints polyline
-  const polylinePoints = waypoints
-    .map((wp) => {
-      const { x, y } = getCoordinates(wp.lat, wp.lng);
-      return `${x},${y}`;
-    })
-    .join(' ');
+  // Center coordinate label for info badge
+  const centerLat = waypoints[0]?.lat ? (waypoints.reduce((acc, w) => acc + w.lat, 0) / waypoints.length).toFixed(4) : '37.5512';
+  const centerLng = waypoints[0]?.lng ? (waypoints.reduce((acc, w) => acc + w.lng, 0) / waypoints.length).toFixed(4) : '126.9882';
 
   return (
-    <div className="relative w-full h-[450px] lg:h-full min-h-[440px] bg-slate-900 overflow-hidden select-none flex flex-col justify-between">
-      {/* Map Layer Background Simulation (Terrain / Satellite / Standard) */}
+    <div className="relative w-full h-[450px] lg:h-full min-h-[440px] bg-slate-100 overflow-hidden flex flex-col justify-between">
+      {/* Real Leaflet Map Container */}
       <div
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        className={`absolute inset-0 cursor-grab active:cursor-grabbing transition-colors duration-300 ${
-          mapMode === 'terrain'
-            ? 'bg-[#e2e8dd]'
-            : mapMode === 'satellite'
-            ? 'bg-[#1b2b25]'
-            : 'bg-[#f4f3f0]'
-        }`}
-        style={{
-          backgroundImage:
-            mapMode === 'terrain'
-              ? 'radial-gradient(#b8c5b0 1.5px, transparent 1.5px), radial-gradient(#d3ded0 1.5px, transparent 1.5px)'
-              : mapMode === 'satellite'
-              ? 'radial-gradient(#143323 2px, transparent 2px)'
-              : 'radial-gradient(#d1d5db 1px, transparent 1px)',
-          backgroundSize:
-            mapMode === 'terrain' ? '30px 30px, 60px 60px' : '40px 40px',
-        }}
-      >
-        {/* Mountain Contour Lines effect for Trekking context */}
-        {mapMode === 'terrain' && (
-          <svg className="absolute inset-0 w-full h-full opacity-20 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="contours" width="160" height="160" patternUnits="userSpaceOnUse">
-                <circle cx="80" cy="80" r="40" fill="none" stroke="#2e583c" strokeWidth="1" strokeDasharray="3 3" />
-                <circle cx="80" cy="80" r="70" fill="none" stroke="#2e583c" strokeWidth="1.2" />
-                <circle cx="80" cy="80" r="100" fill="none" stroke="#2e583c" strokeWidth="0.8" />
-                <circle cx="80" cy="80" r="130" fill="none" stroke="#2e583c" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#contours)" />
-          </svg>
-        )}
+        ref={mapContainerRef}
+        className="absolute inset-0 w-full h-full z-0"
+        id="leaflet-interactive-map"
+      />
 
-        {/* Scalable Container for SVG Route & Pins */}
-        <div
-          className="absolute inset-0 origin-center transition-transform duration-100"
-          style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-          }}
-        >
-          {/* SVG Polyline connecting waypoints */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {/* Outer glow shadow */}
-            <polyline
-              points={polylinePoints}
-              fill="none"
-              stroke={mapMode === 'satellite' ? '#34d399' : '#059669'}
-              strokeWidth="1.8"
-              strokeOpacity="0.25"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Main trekking polyline */}
-            <polyline
-              points={polylinePoints}
-              fill="none"
-              stroke={mapMode === 'satellite' ? '#10b981' : '#047857'}
-              strokeWidth="0.9"
-              strokeDasharray="2 1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-
-            {/* Path segment markers / distance ticks */}
-            {waypoints.map((wp, idx) => {
-              if (idx === waypoints.length - 1) return null;
-              const nextWp = waypoints[idx + 1];
-              const pt1 = getCoordinates(wp.lat, wp.lng);
-              const pt2 = getCoordinates(nextWp.lat, nextWp.lng);
-              const midX = (pt1.x + pt2.x) / 2;
-              const midY = (pt1.y + pt2.y) / 2;
-
-              return (
-                <circle
-                  key={`mid-${idx}`}
-                  cx={midX}
-                  cy={midY}
-                  r="0.8"
-                  fill="#ffffff"
-                  stroke="#047857"
-                  strokeWidth="0.4"
-                />
-              );
-            })}
-          </svg>
-
-          {/* Render Waypoint Pins */}
-          {waypoints.map((wp, idx) => {
-            const { x, y } = getCoordinates(wp.lat, wp.lng);
-            const isSelected = wp.id === selectedWaypointId;
-            const hasUpvoted = wp.upVotes.includes(currentMember.id);
-            const hasDownvoted = wp.downVotes.includes(currentMember.id);
-
-            return (
-              <div
-                key={wp.id}
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                className={`absolute z-20 transition-all ${
-                  isSelected ? 'z-30 scale-125' : 'hover:scale-115'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectWaypoint(wp.id);
-                }}
-              >
-                {/* Pin Head */}
-                <div
-                  className={`relative cursor-pointer shadow-md rounded-full px-2 py-1 flex items-center gap-1 border-2 font-bold text-xs ${getSpotColor(
-                    wp.type
-                  )} ${isSelected ? 'ring-4 ring-emerald-400' : ''}`}
-                >
-                  <span className="text-[10px] opacity-90">{idx + 1}.</span>
-                  {getSpotIcon(wp.type, true)}
-                  <span className="max-w-[85px] sm:max-w-[120px] truncate text-[11px] font-semibold">
-                    {wp.name}
-                  </span>
-
-                  {/* Feedback summary pill */}
-                  {wp.upVotes.length > 0 && (
-                    <span className="ml-0.5 bg-black/25 text-[10px] px-1 rounded-full flex items-center gap-0.5">
-                      👍{wp.upVotes.length}
-                    </span>
-                  )}
-                  {wp.comments.length > 0 && (
-                    <span className="bg-black/25 text-[10px] px-1 rounded-full flex items-center gap-0.5">
-                      💬{wp.comments.length}
-                    </span>
-                  )}
-                </div>
-
-                {/* Pin pointer tick */}
-                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-slate-800 mx-auto -mt-0.5 opacity-80" />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Top Map Controls: Layer switcher, GPS info */}
-      <div className="relative z-20 m-3 flex items-center justify-between pointer-events-none">
+      {/* Top Map Controls (Z-index 1000 to overlay above Leaflet) */}
+      <div className="relative z-[1000] m-3 flex items-center justify-between pointer-events-none gap-2">
         {/* Layer Selector */}
-        <div className="pointer-events-auto flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-lg border border-slate-200/90 shadow-sm text-xs font-semibold text-slate-700">
+        <div className="pointer-events-auto flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-lg border border-slate-200/90 shadow-md text-xs font-semibold text-slate-700">
           <button
             onClick={() => setMapMode('terrain')}
-            className={`px-2 py-1 rounded transition-colors ${
-              mapMode === 'terrain' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-100'
+            className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+              mapMode === 'terrain' ? 'bg-emerald-600 text-white shadow-xs' : 'hover:bg-slate-100'
             }`}
           >
             등산 지형도
           </button>
           <button
             onClick={() => setMapMode('satellite')}
-            className={`px-2 py-1 rounded transition-colors ${
-              mapMode === 'satellite' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-100'
+            className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+              mapMode === 'satellite' ? 'bg-emerald-600 text-white shadow-xs' : 'hover:bg-slate-100'
             }`}
           >
             위성 지도
           </button>
           <button
             onClick={() => setMapMode('standard')}
-            className={`px-2 py-1 rounded transition-colors ${
-              mapMode === 'standard' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-100'
+            className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+              mapMode === 'standard' ? 'bg-emerald-600 text-white shadow-xs' : 'hover:bg-slate-100'
             }`}
           >
-            표준 뷰
+            일반 지도
           </button>
         </div>
 
+        {/* Destination Coordinate Chip */}
+        <div className="pointer-events-auto hidden md:flex items-center gap-1.5 bg-white/95 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-600">
+          <Compass className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="font-semibold text-slate-800">
+            {plan.title.includes('남산') ? '서울 남산' : plan.title.includes('북한산') ? '북한산' : plan.title.includes('관악산') ? '관악산' : plan.title.includes('설악산') ? '설악산' : '지리산'}
+          </span>
+          <span className="text-[11px] font-mono text-slate-500">
+            ({centerLat}°, {centerLng}°)
+          </span>
+        </div>
+
         {/* Zoom & Fit Bounds controls */}
-        <div className="pointer-events-auto flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-lg border border-slate-200/90 shadow-sm">
+        <div className="pointer-events-auto flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-lg border border-slate-200/90 shadow-md">
           <button
-            onClick={() => setZoomLevel((z) => Math.min(z + 0.25, 2.5))}
-            className="p-1.5 hover:bg-slate-100 rounded text-slate-700 transition-colors"
+            onClick={() => mapInstanceRef.current?.zoomIn()}
+            className="p-1.5 hover:bg-slate-100 rounded text-slate-700 transition-colors cursor-pointer"
             title="지도 확대"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setZoomLevel((z) => Math.max(z - 0.25, 0.75))}
-            className="p-1.5 hover:bg-slate-100 rounded text-slate-700 transition-colors"
+            onClick={() => mapInstanceRef.current?.zoomOut()}
+            className="p-1.5 hover:bg-slate-100 rounded text-slate-700 transition-colors cursor-pointer"
             title="지도 축소"
           >
             <ZoomOut className="w-4 h-4" />
@@ -348,18 +336,18 @@ export const MapView: React.FC<MapViewProps> = ({
           <div className="w-px h-4 bg-slate-200 mx-0.5" />
           <button
             onClick={fitBounds}
-            className="flex items-center gap-1 px-2 py-1 hover:bg-slate-100 rounded text-xs font-medium text-slate-700 transition-colors"
-            title="전체 경로 한눈에 보기"
+            className="flex items-center gap-1 px-2 py-1 hover:bg-slate-100 rounded text-xs font-medium text-slate-700 transition-colors cursor-pointer"
+            title="전체 코스 한눈에 맞추기"
           >
             <Maximize2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">경로 맞춤</span>
+            <span className="hidden sm:inline">코스 맞춤</span>
           </button>
         </div>
       </div>
 
-      {/* Bottom Popup Card for Selected Waypoint */}
+      {/* Bottom Popup Card for Selected Waypoint (Z-index 1000) */}
       {selectedWaypoint && (
-        <div className="relative z-30 m-3 p-3 sm:p-4 bg-white/98 backdrop-blur-md rounded-xl border border-slate-200 shadow-xl max-w-xl self-center w-[calc(100%-24px)] transition-all animate-in fade-in slide-in-from-bottom-3">
+        <div className="relative z-[1000] m-3 p-3 sm:p-4 bg-white/98 backdrop-blur-md rounded-xl border border-slate-200 shadow-2xl max-w-xl self-center w-[calc(100%-24px)] transition-all animate-in fade-in slide-in-from-bottom-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-2.5">
               <div
@@ -370,7 +358,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 {getSpotIcon(selectedWaypoint.type)}
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="font-bold text-slate-900 text-sm sm:text-base">
                     {selectedWaypoint.name}
                   </h4>
@@ -381,7 +369,7 @@ export const MapView: React.FC<MapViewProps> = ({
                   )}
                   <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
                     {selectedWaypoint.type === 'START'
-                      ? '출발지'
+                      ? '들머리 (출발지)'
                       : selectedWaypoint.type === 'REST'
                       ? '휴식/쉼터'
                       : selectedWaypoint.type === 'FOOD'
@@ -390,7 +378,7 @@ export const MapView: React.FC<MapViewProps> = ({
                       ? '전망/포토존'
                       : selectedWaypoint.type === 'STAY'
                       ? '숙박/대피소'
-                      : '도착지'}
+                      : '날머리 (도착지)'}
                   </span>
                 </div>
                 {selectedWaypoint.description && (
@@ -401,7 +389,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 {selectedWaypoint.aiNote && (
                   <div className="mt-1.5 flex items-start gap-1.5 bg-emerald-50/80 border border-emerald-200/60 p-2 rounded-lg text-xs text-emerald-900">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>트레킹 AI 조언:</strong> {selectedWaypoint.aiNote}</span>
+                    <span><strong>트레킹 가이드:</strong> {selectedWaypoint.aiNote}</span>
                   </div>
                 )}
               </div>
@@ -410,7 +398,7 @@ export const MapView: React.FC<MapViewProps> = ({
             {/* Close popup */}
             <button
               onClick={() => onSelectWaypoint('')}
-              className="text-slate-400 hover:text-slate-600 p-1 text-xs shrink-0 font-bold"
+              className="text-slate-400 hover:text-slate-600 p-1 text-xs shrink-0 font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -450,8 +438,8 @@ export const MapView: React.FC<MapViewProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onOpenAlternative(selectedWaypoint)}
-                className="flex items-center gap-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors"
-                title="Gemini AI가 인근 대체 휴식처나 명소를 추천합니다"
+                className="flex items-center gap-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer"
+                title="인근 대체 휴식처나 명소를 추천합니다"
               >
                 <Sparkles className="w-3 h-3 text-emerald-600" />
                 <span>AI 대안 장소</span>
@@ -459,7 +447,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
               <button
                 onClick={() => onOpenSpotComments(selectedWaypoint)}
-                className="flex items-center gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-semibold transition-colors"
+                className="flex items-center gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer"
               >
                 <MessageSquare className="w-3 h-3 text-emerald-600" />
                 <span>의견 {selectedWaypoint.comments.length}개</span>
@@ -469,14 +457,14 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
       )}
 
-      {/* Bottom status indicator bar */}
-      <div className="relative z-20 m-3 flex items-center justify-between text-[11px] text-slate-500 bg-white/80 backdrop-blur-xs px-3 py-1 rounded-md border border-slate-200/80 shadow-xs">
+      {/* Bottom status indicator bar (Z-index 1000) */}
+      <div className="relative z-[1000] m-3 flex items-center justify-between text-[11px] text-slate-600 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>8인 그룹 동선 비교 모드 • 마커 클릭 시 지점별 찬반 & 의견 등록 가능</span>
+          <span>실제 지도 기반 트레킹 경로 • 마커 클릭 시 지점별 피드백 및 의견 작성</span>
         </div>
-        <div className="hidden sm:block">
-          마우스 드래그로 지도 이동 / 마우스 휠 또는 우측 상단 버튼으로 확대·축소
+        <div className="hidden sm:block text-slate-400">
+          마우스 드래그로 지도 이동 • 휠 스크롤로 확대/축소
         </div>
       </div>
     </div>

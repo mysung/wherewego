@@ -46,8 +46,10 @@ export const KakaoShareModal: React.FC<KakaoShareModalProps> = ({
     space.plans.forEach((p, idx) => {
       const num = idx + 1;
       const votesText = p.votes.length > 0 ? ` [👍 ${p.votes.length}표]` : '';
+      const startText = p.startPoint || p.waypoints[0]?.name || '들머리';
+      const endText = p.endPoint || p.waypoints[p.waypoints.length - 1]?.name || '날머리';
       lines.push(
-        `${num}안: ${p.title} (${p.totalDistance}, ${p.totalDuration}, 난이도:${p.difficulty})${votesText}`
+        `${num}안: ${p.title}\n   • 코스: [들머리] ${startText} ➔ [날머리] ${endText}\n   • 제원: ${p.totalDistance} | ${p.totalDuration} | 난이도 ${p.difficulty}${votesText}`
       );
     });
 
@@ -129,6 +131,9 @@ export const KakaoShareModal: React.FC<KakaoShareModalProps> = ({
                   <h4 className="text-sm font-extrabold text-white mt-0.5">
                     {activePlan.title}
                   </h4>
+                  <div className="text-[10px] text-emerald-200 mt-0.5 font-medium">
+                    들머리: {activePlan.startPoint || activePlan.waypoints[0]?.name || '시작점'} ➔ 날머리: {activePlan.endPoint || activePlan.waypoints[activePlan.waypoints.length - 1]?.name || '도착점'}
+                  </div>
                   <div className="mt-1 flex items-center justify-center gap-2 text-[11px] text-emerald-100 font-mono">
                     <span>{activePlan.totalDistance}</span>
                     <span>•</span>
