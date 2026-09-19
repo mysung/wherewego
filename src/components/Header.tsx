@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Member, TrekSpace, TrekPlan } from '../types';
-import { Mountain, Users, Share2, Copy, Check, Sparkles, Trophy, Award, Shield, UserCog } from 'lucide-react';
+import { Mountain, Users, Share2, Copy, Check, Sparkles, Trophy, Award, Shield, UserCog, Eye, EyeOff, LayoutGrid } from 'lucide-react';
 
 interface HeaderProps {
   space: TrekSpace;
@@ -14,6 +14,8 @@ interface HeaderProps {
   copiedText: boolean;
   onResetData: () => void;
   onOpenMemberManage: () => void;
+  isMinimalMode?: boolean;
+  onToggleMinimalMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
   copiedText,
   onResetData,
   onOpenMemberManage,
+  isMinimalMode = false,
+  onToggleMinimalMode,
 }) => {
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
 
@@ -191,6 +195,35 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Minimal Mode Toggle Button */}
+          {onToggleMinimalMode && (
+            <button
+              onClick={onToggleMinimalMode}
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-semibold border transition-all cursor-pointer ${
+                isMinimalMode
+                  ? 'bg-[#064e3b] text-white border-emerald-600 shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-300'
+              }`}
+              title={
+                isMinimalMode
+                  ? '미니멀 모드 켜짐: 필수 지도와 핵심 코스만 표시 중 (클릭 시 상세 모드로 복원)'
+                  : '미니멀 모드 켜기: 세부 통계와 보조 정보를 숨기고 지도와 핵심 코스에 집중'
+              }
+            >
+              {isMinimalMode ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>미니멀 모드 <strong>ON</strong></span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-slate-600" />
+                  <span>미니멀 모드</span>
+                </>
+              )}
+            </button>
+          )}
 
           {/* Quick Kakao Poll Copy Button */}
           <button

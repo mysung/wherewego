@@ -26,6 +26,7 @@ interface PlanTabBarProps {
   onOpenAllPlans: () => void;
   onEditPlan: (plan: TrekPlan) => void;
   onDeletePlan: (planId: string) => void;
+  isMinimalMode?: boolean;
 }
 
 export const PlanTabBar: React.FC<PlanTabBarProps> = ({
@@ -39,6 +40,7 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
   onOpenAllPlans,
   onEditPlan,
   onDeletePlan,
+  isMinimalMode = false,
 }) => {
   const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
 
@@ -218,95 +220,103 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Summary Strip: Key Metrics from PRD */}
-      <div className="bg-slate-50 border-t border-slate-200/90 py-2 px-3 sm:px-6 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Key Numbers */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-slate-700">
-            {/* Trailhead (들머리) & Ending (날머리) Badge */}
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
-              <span className="text-[11px] font-bold text-[#064e3b] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#064e3b]"></span>
-                들머리: {activePlan.startPoint || activePlan.waypoints[0]?.name || '출발점'}
-              </span>
-              <span className="text-slate-400 text-xs">➔</span>
-              <span className="text-[11px] font-bold text-[#881337] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#881337]"></span>
-                날머리: {activePlan.endPoint || activePlan.waypoints[activePlan.waypoints.length - 1]?.name || '원점회귀'}
-              </span>
-            </div>
+      {/* Bottom Summary Strip: Key Metrics (Cleaned: removed estimatedCost, auto-compact in minimal mode) */}
+      {!isMinimalMode ? (
+        <div className="bg-slate-50 border-t border-slate-200/90 py-1.5 px-3 sm:px-6 text-xs">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+            {/* Key Numbers: Trailhead, Distance, Duration, Difficulty */}
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-slate-700">
+              {/* Trailhead (들머리) & Ending (날머리) Badge */}
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                <span className="text-[11px] font-bold text-[#064e3b] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#064e3b]"></span>
+                  들머리: {activePlan.startPoint || activePlan.waypoints[0]?.name || '출발점'}
+                </span>
+                <span className="text-slate-400 text-xs">➔</span>
+                <span className="text-[11px] font-bold text-[#881337] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#881337]"></span>
+                  날머리: {activePlan.endPoint || activePlan.waypoints[activePlan.waypoints.length - 1]?.name || '원점회귀'}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-1.5">
-              <Ruler className="w-4 h-4 text-[#064e3b]" />
-              <span className="text-slate-500">총 거리:</span>
-              <strong className="text-slate-900 font-bold">{activePlan.totalDistance}</strong>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-[#881337]" />
-              <span className="text-slate-500">예상 소요:</span>
-              <strong className="text-slate-900 font-bold">{activePlan.totalDuration}</strong>
-            </div>
-
-            {activePlan.elevationGain && (
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-[#064e3b]" />
-                <span className="text-slate-500">고도 상승:</span>
-                <strong className="text-slate-900 font-bold">{activePlan.elevationGain}</strong>
+                <Ruler className="w-4 h-4 text-[#064e3b]" />
+                <span className="text-slate-500">총 거리:</span>
+                <strong className="text-slate-900 font-bold">{activePlan.totalDistance}</strong>
               </div>
-            )}
 
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-[#881337]" />
-              <span className="text-slate-500">난이도:</span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                  activePlan.difficulty === '하'
-                    ? 'bg-emerald-100 text-[#064e3b]'
-                    : activePlan.difficulty === '중'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-rose-100 text-[#881337]'
-                }`}
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-[#881337]" />
+                <span className="text-slate-500">예상 소요:</span>
+                <strong className="text-slate-900 font-bold">{activePlan.totalDuration}</strong>
+              </div>
+
+              {activePlan.elevationGain && (
+                <div className="flex items-center gap-1.5 hidden lg:flex">
+                  <TrendingUp className="w-4 h-4 text-[#064e3b]" />
+                  <span className="text-slate-500">고도:</span>
+                  <strong className="text-slate-900 font-bold">{activePlan.elevationGain}</strong>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-[#881337]" />
+                <span className="text-slate-500">난이도:</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                    activePlan.difficulty === '하'
+                      ? 'bg-emerald-100 text-[#064e3b]'
+                      : activePlan.difficulty === '중'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-rose-100 text-[#881337]'
+                  }`}
+                >
+                  {activePlan.difficulty}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 hidden sm:flex">
+                <Compass className="w-4 h-4 text-slate-600" />
+                <span className="text-slate-500">경유지:</span>
+                <strong className="text-slate-900">{activePlan.waypoints.length}곳</strong>
+              </div>
+            </div>
+
+            {/* Actions: View All & Verify */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onOpenAllPlans}
+                className="flex items-center gap-1 text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer"
               >
-                {activePlan.difficulty}
-              </span>
+                <ListFilter className="w-3.5 h-3.5 text-[#064e3b]" />
+                <span>제안 전체 비교</span>
+              </button>
+
+              <button
+                onClick={onOpenVerify}
+                className="flex items-center gap-1.5 text-xs bg-white hover:bg-rose-50 text-slate-700 hover:text-[#881337] border border-slate-300 hover:border-rose-300 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#881337]" />
+                <span>AI 안전 검증</span>
+              </button>
             </div>
-
-            {activePlan.estimatedCost && (
-              <div className="flex items-center gap-1.5 hidden md:flex">
-                <DollarSign className="w-4 h-4 text-[#064e3b]" />
-                <span className="text-slate-500">예상 경비:</span>
-                <strong className="text-slate-900">{activePlan.estimatedCost}</strong>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5">
-              <Compass className="w-4 h-4 text-slate-600" />
-              <span className="text-slate-500">경유지:</span>
-              <strong className="text-slate-900">{activePlan.waypoints.length}곳</strong>
-            </div>
-          </div>
-
-          {/* AI Course Verify & View All Trigger buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenAllPlans}
-              className="flex items-center gap-1 text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer"
-            >
-              <ListFilter className="w-3.5 h-3.5 text-[#064e3b]" />
-              <span>제안 전체 비교</span>
-            </button>
-
-            <button
-              onClick={onOpenVerify}
-              className="flex items-center gap-1.5 text-xs bg-white hover:bg-rose-50 text-slate-700 hover:text-[#881337] border border-slate-300 hover:border-rose-300 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#881337]" />
-              <span>AI 피로도·안전 검증</span>
-            </button>
           </div>
         </div>
-      </div>
+      ) : (
+        /* Ultra Minimal Mode Single-line bar */
+        <div className="bg-slate-50 border-t border-slate-200 py-1 px-3 sm:px-6 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-3 text-slate-700 font-medium">
+            <span className="text-[#064e3b] font-bold">
+              {activePlan.startPoint || '출발'} ➔ {activePlan.endPoint || '도착'}
+            </span>
+            <span>•</span>
+            <span>거리 <strong>{activePlan.totalDistance}</strong></span>
+            <span>•</span>
+            <span>소요 <strong>{activePlan.totalDuration}</strong></span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-semibold">미니멀 모드 활성 중</span>
+        </div>
+      )}
     </div>
   );
 };

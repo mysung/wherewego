@@ -97,9 +97,10 @@ const STORAGE_COLLAPSED_KEY = 'wherewego_trek_banner_collapsed_v1';
 interface TrekHeroBannerProps {
   space: TrekSpace;
   activePlan: TrekPlan;
+  isMinimalMode?: boolean;
 }
 
-export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePlan }) => {
+export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePlan, isMinimalMode = false }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Current active background image
@@ -196,7 +197,9 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
       {/* 1. Background Image with Rich Forest Green & Deep Wine Vignette Gradient */}
       <div
         className={`relative w-full transition-all duration-300 overflow-hidden bg-slate-900 ${
-          isCollapsed ? 'h-14 sm:h-16' : 'h-36 sm:h-44 md:h-48'
+          isMinimalMode || isCollapsed
+            ? 'h-12 sm:h-14'
+            : 'h-24 sm:h-28 md:h-32'
         }`}
       >
         <img
@@ -212,87 +215,63 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
           className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-500"
         />
 
-        {/* Dual Tone Atmosphere Overlay:
-            Left/Top: Deep Forest Green (#064e3b/55%)
-            Right/Bottom: Sophisticated Wine Bordeaux (#881337/50%)
-            Center: Natural scenic transparency with subtle darkening for crystal-clear readability
-        */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#064e3b]/60 via-slate-900/35 to-[#881337]/50" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/55" />
+        {/* Dual Tone Atmosphere Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#064e3b]/70 via-slate-900/40 to-[#881337]/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/50" />
 
         {/* 2. Banner Content Layer */}
         <div className="relative z-10 max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between">
           {/* Left Text Block */}
           <div className="max-w-2xl text-white">
-            {/* Tag / Category Badge (Forest Green & Wine Accent) */}
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#064e3b] text-emerald-200 border border-emerald-400/40 shadow-xs">
-                <Compass className="w-3 h-3 text-emerald-300" />
-                <span>단체 트레킹</span>
-              </span>
-
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#881337] text-rose-100 border border-rose-400/40 shadow-xs">
-                <Sparkles className="w-3 h-3 text-rose-200" />
-                <span>
-                  {activePlan?.difficulty === '상'
-                    ? '도전 암릉 코스'
-                    : activePlan?.difficulty === '중'
-                    ? '능선 종주 산행'
-                    : '힐링 둘레길'}
-                </span>
-              </span>
-
-              {activePlan && (
-                <span className="text-[11px] text-emerald-100/90 hidden sm:inline-flex items-center gap-1">
-                  <span>선택된 코스:</span>
-                  <strong className="text-white font-semibold underline decoration-emerald-300">
-                    {activePlan.title}
-                  </strong>
-                </span>
-              )}
-            </div>
-
-            {/* Headline Title */}
-            {!isCollapsed ? (
+            {!isMinimalMode && !isCollapsed ? (
               <>
-                <h2 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-md leading-snug">
-                  {activePlan ? activePlan.title : space.title}
-                </h2>
-                <p className="text-xs sm:text-sm text-emerald-100/90 mt-1 line-clamp-1 drop-shadow font-medium">
-                  {activePlan?.summary ||
-                    `맑은 공기와 푸른 능선 속에서 ${space.members.length}명이 함께 완성해나가는 최적의 트레킹 여정`}
-                </p>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#881337] text-rose-100 border border-rose-400/40 shadow-xs">
+                    <Sparkles className="w-3 h-3 text-rose-200" />
+                    <span>
+                      {activePlan?.difficulty === '상'
+                        ? '도전 암릉'
+                        : activePlan?.difficulty === '중'
+                        ? '능선 종주'
+                        : '힐링 둘레길'}
+                    </span>
+                  </span>
 
-                {/* Sub info row: date, location, trail summary */}
-                <div className="mt-2.5 flex items-center gap-3 sm:gap-4 text-xs text-white/85 flex-wrap">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>{space.date}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-rose-300" />
+                  {activePlan && (
+                    <span className="text-[11px] text-emerald-100/90 hidden sm:inline-flex items-center gap-1">
+                      <span>선택 코스:</span>
+                      <strong className="text-white font-semibold underline decoration-emerald-300">
+                        {activePlan.title}
+                      </strong>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <h2 className="text-sm sm:text-base md:text-lg font-black tracking-tight text-white drop-shadow-md leading-tight">
+                    {activePlan ? activePlan.title : space.title}
+                  </h2>
+                  <div className="hidden sm:flex items-center gap-1 text-xs text-white/85">
+                    <MapPin className="w-3.5 h-3.5 text-rose-300 shrink-0" />
                     <span>
                       {activePlan?.startPoint
                         ? `${activePlan.startPoint} ~ ${activePlan.endPoint || '원점회귀'}`
                         : space.destination}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 hidden md:flex">
-                    <Users className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>
-                      참여 {space.members.length}명 (현재 {activePlan?.votes.length || 0}표 확보)
-                    </span>
-                  </div>
                 </div>
               </>
             ) : (
-              /* Compact bar when collapsed */
-              <div className="flex items-center gap-3">
-                <h2 className="text-sm font-bold text-white truncate">
+              /* Compact slim bar */
+              <div className="flex items-center gap-2.5">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#881337] text-rose-100">
+                  {activePlan?.difficulty === '상' ? '도전' : activePlan?.difficulty === '중' ? '종주' : '힐링'}
+                </span>
+                <h2 className="text-xs sm:text-sm font-bold text-white truncate">
                   {activePlan ? activePlan.title : space.title}
                 </h2>
-                <span className="text-xs text-emerald-200/90 hidden sm:inline">
-                  • {activePlan?.startPoint || space.destination} ({activePlan?.votes.length || 0}표)
+                <span className="text-xs text-emerald-200/90 hidden md:inline">
+                  • {activePlan?.startPoint || space.destination}
                 </span>
               </div>
             )}

@@ -50,6 +50,7 @@ interface WaypointListProps {
   onOpenAllPlansModal?: () => void;
   viewMode?: 'proposals' | 'waypoints';
   onViewModeChange?: (mode: 'proposals' | 'waypoints') => void;
+  isMinimalMode?: boolean;
 }
 
 export const WaypointList: React.FC<WaypointListProps> = ({
@@ -72,6 +73,7 @@ export const WaypointList: React.FC<WaypointListProps> = ({
   onOpenAllPlansModal,
   viewMode: controlledViewMode,
   onViewModeChange,
+  isMinimalMode = false,
 }) => {
   // Local state if not controlled externally
   const [internalViewMode, setInternalViewMode] = useState<'proposals' | 'waypoints'>('proposals');
@@ -273,7 +275,7 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                   </div>
 
                   {/* 들머리 (출발) ➔ 날머리 (도착) Strip */}
-                  <div className="mt-2.5 bg-slate-50/90 rounded-lg p-2 border border-slate-100 flex items-center justify-between text-xs">
+                  <div className="mt-2 bg-slate-50/90 rounded-lg p-1.5 border border-slate-100 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 min-w-0 flex-1">
                       <MapPin className="w-3.5 h-3.5 text-[#064e3b] shrink-0" />
                       <div className="min-w-0 truncate">
@@ -284,7 +286,7 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                       </div>
                     </div>
 
-                    <ArrowRight className="w-3 h-3 text-slate-400 shrink-0 mx-1.5" />
+                    <ArrowRight className="w-3 h-3 text-slate-400 shrink-0 mx-1" />
 
                     <div className="flex items-center gap-1 min-w-0 flex-1">
                       <Compass className="w-3.5 h-3.5 text-[#881337] shrink-0" />
@@ -297,8 +299,8 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                     </div>
                   </div>
 
-                  {/* Trail Metrics Specs (거리, 시간, 난이도, 고도) */}
-                  <div className="mt-2 grid grid-cols-4 gap-1.5 text-center text-[11px] bg-slate-50/50 p-1.5 rounded-lg border border-slate-100">
+                  {/* Trail Metrics Specs (거리, 시간, 난이도) */}
+                  <div className={`mt-2 grid ${isMinimalMode ? 'grid-cols-3' : 'grid-cols-4'} gap-1.5 text-center text-[11px] bg-slate-50/50 p-1.5 rounded-lg border border-slate-100`}>
                     <div>
                       <div className="text-[10px] text-slate-400">거리</div>
                       <div className="font-bold text-slate-800">{plan.totalDistance}</div>
@@ -323,35 +325,40 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                         </span>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400">상승</div>
-                      <div className="font-bold text-slate-800">{plan.elevationGain || '-'}</div>
-                    </div>
-                  </div>
-
-                  {/* Waypoints Sequence Preview */}
-                  <div className="mt-2 flex items-center gap-1 flex-wrap text-[10px]">
-                    <span className="text-slate-400 font-medium">동선:</span>
-                    {plan.waypoints.slice(0, 4).map((wp, wIdx) => (
-                      <span
-                        key={wp.id}
-                        className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
-                      >
-                        {wIdx + 1}. {wp.name}
-                      </span>
-                    ))}
-                    {plan.waypoints.length > 4 && (
-                      <span className="text-slate-400 font-medium">
-                        +{plan.waypoints.length - 4}곳
-                      </span>
+                    {!isMinimalMode && (
+                      <div>
+                        <div className="text-[10px] text-slate-400">상승</div>
+                        <div className="font-bold text-slate-800">{plan.elevationGain || '-'}</div>
+                      </div>
                     )}
                   </div>
 
-                  {/* Summary if present */}
-                  {plan.summary && (
-                    <p className="mt-2 text-[11px] text-slate-600 line-clamp-2 bg-slate-50/70 p-1.5 rounded border border-slate-100/70">
-                      {plan.summary}
-                    </p>
+                  {/* Waypoints Sequence Preview & Summary (Hidden in minimal mode for clean focus) */}
+                  {!isMinimalMode && (
+                    <>
+                      <div className="mt-2 flex items-center gap-1 flex-wrap text-[10px]">
+                        <span className="text-slate-400 font-medium">동선:</span>
+                        {plan.waypoints.slice(0, 4).map((wp, wIdx) => (
+                          <span
+                            key={wp.id}
+                            className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
+                          >
+                            {wIdx + 1}. {wp.name}
+                          </span>
+                        ))}
+                        {plan.waypoints.length > 4 && (
+                          <span className="text-slate-400 font-medium">
+                            +{plan.waypoints.length - 4}곳
+                          </span>
+                        )}
+                      </div>
+
+                      {plan.summary && (
+                        <p className="mt-2 text-[11px] text-slate-600 line-clamp-2 bg-slate-50/70 p-1.5 rounded border border-slate-100/70">
+                          {plan.summary}
+                        </p>
+                      )}
+                    </>
                   )}
 
                   {/* Card Action Footer */}

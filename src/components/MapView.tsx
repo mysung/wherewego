@@ -33,6 +33,7 @@ interface MapViewProps {
   onOpenAlternative: (waypoint: Waypoint) => void;
   mapLayout?: 'split' | 'wide' | 'fullscreen';
   onChangeMapLayout?: (layout: 'split' | 'wide' | 'fullscreen') => void;
+  isMinimalMode?: boolean;
 }
 
 // Tile Layer configurations
@@ -71,6 +72,7 @@ export const MapView: React.FC<MapViewProps> = ({
   onOpenAlternative,
   mapLayout = 'split',
   onChangeMapLayout,
+  isMinimalMode = false,
 }) => {
   const [mapMode, setMapMode] = useState<'terrain' | 'satellite' | 'standard'>('terrain');
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -313,14 +315,11 @@ export const MapView: React.FC<MapViewProps> = ({
           </button>
         </div>
 
-        {/* Destination Coordinate Chip */}
-        <div className="pointer-events-auto hidden md:flex items-center gap-1.5 bg-white/95 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-600">
+        {/* Destination Location Chip (Cleaned: no raw coordinates) */}
+        <div className="pointer-events-auto hidden md:flex items-center gap-1.5 bg-white/95 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-700">
           <Compass className="w-3.5 h-3.5 text-emerald-600" />
           <span className="font-semibold text-slate-800">
             {plan.title.includes('남산') ? '서울 남산' : plan.title.includes('북한산') ? '북한산' : plan.title.includes('관악산') ? '관악산' : plan.title.includes('설악산') ? '설악산' : '지리산'}
-          </span>
-          <span className="text-[11px] font-mono text-slate-500">
-            ({centerLat}°, {centerLng}°)
           </span>
         </div>
 
@@ -508,16 +507,18 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
       )}
 
-      {/* Bottom status indicator bar (Z-index 1000) */}
-      <div className="relative z-[1000] m-3 flex items-center justify-between text-[11px] text-slate-600 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>실제 지도 기반 트레킹 경로 • 마커 클릭 시 지점별 피드백 및 의견 작성</span>
+      {/* Bottom status indicator bar (Hidden in minimal mode) */}
+      {!isMinimalMode && (
+        <div className="relative z-[1000] m-3 flex items-center justify-between text-[11px] text-slate-600 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>실제 지도 기반 트레킹 경로 • 마커 클릭 시 지점별 피드백 및 의견 작성</span>
+          </div>
+          <div className="hidden sm:block text-slate-400">
+            마우스 드래그로 지도 이동 • 휠 스크롤로 확대/축소
+          </div>
         </div>
-        <div className="hidden sm:block text-slate-400">
-          마우스 드래그로 지도 이동 • 휠 스크롤로 확대/축소
-        </div>
-      </div>
+      )}
     </div>
   );
 };

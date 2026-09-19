@@ -74,6 +74,27 @@ export default function App() {
     return 'split';
   });
 
+  // Minimal Mode state (user requested toggle to hide secondary info & statistics)
+  const [isMinimalMode, setIsMinimalMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('wherewego_minimal_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleMinimalMode = () => {
+    setIsMinimalMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('wherewego_minimal_mode', String(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
   // Adjustable split panel width percentage (left panel width in %, default 35%)
   const [leftPanelPercent, setLeftPanelPercent] = useState<number>(() => {
     try {
@@ -519,7 +540,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans">
-      {/* 1. Header (Brand, Space, 8-Member avatars, Profile switcher, Kakao button) */}
+      {/* 1. Header (Brand, Space, 8-Member avatars, Profile switcher, Minimal Mode toggle, Kakao button) */}
       <Header
         space={space}
         currentMember={currentMember}
@@ -532,10 +553,12 @@ export default function App() {
         copiedText={copiedTextToast}
         onResetData={handleResetData}
         onOpenMemberManage={() => setIsMemberManageOpen(true)}
+        isMinimalMode={isMinimalMode}
+        onToggleMinimalMode={toggleMinimalMode}
       />
 
-      {/* Trek Hero Banner (Inspiring trekking scenery photo band, customizable presets & mood) */}
-      <TrekHeroBanner space={space} activePlan={activePlan} />
+      {/* Trek Hero Banner (Slim banner; in minimal mode it is further reduced to a clean 1-line strip) */}
+      <TrekHeroBanner space={space} activePlan={activePlan} isMinimalMode={isMinimalMode} />
 
       {/* 2. Plan Tab Bar (Tab comparison, quick stats, AI generate button, Fork button) */}
       <PlanTabBar
@@ -553,6 +576,7 @@ export default function App() {
         onOpenAllPlans={() => setLeftPanelView('proposals')}
         onEditPlan={handleOpenEditPlan}
         onDeletePlan={handleDeletePlan}
+        isMinimalMode={isMinimalMode}
       />
 
       {/* 3. Main Workspace: Split View (Left: Proposals / Waypoint Timeline, Right: Interactive Map with Draggable Resizer) */}
@@ -613,6 +637,7 @@ export default function App() {
               onOpenAllPlansModal={() => setIsAllPlansOpen(true)}
               viewMode={leftPanelView}
               onViewModeChange={(mode) => setLeftPanelView(mode)}
+              isMinimalMode={isMinimalMode}
             />
           </div>
         )}
@@ -673,6 +698,7 @@ export default function App() {
                 console.error(e);
               }
             }}
+            isMinimalMode={isMinimalMode}
           />
         </div>
       </main>
