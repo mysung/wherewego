@@ -359,10 +359,10 @@ export const MapView: React.FC<MapViewProps> = ({
                   className={`px-1.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 ${
                     mapLayout === 'split' ? 'bg-white text-emerald-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title="기본 분할 뷰 (타임라인 + 지도)"
+                  title="기본 분할 뷰 (경계선을 좌우로 드래그하여 크기 조절 가능)"
                 >
                   <Columns className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline text-[11px]">분할</span>
+                  <span className="hidden lg:inline text-[11px]">분할 (조절)</span>
                 </button>
                 <button
                   onClick={() => onChangeMapLayout('wide')}

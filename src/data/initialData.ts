@@ -14,7 +14,7 @@ export const INITIAL_MEMBERS: Member[] = [
 export const INITIAL_SPACES: TrekSpace[] = [
   {
     id: 'space-namsan-01',
-    title: '서울 남산타워 & 지리산 8인 트레킹 모임',
+    title: '서울 남산타워 & 지리산 트레킹 모임',
     destination: '서울 남산타워 (둘레길 & N서울타워)',
     date: '2026-10-18 (토)',
     isVotingClosed: false,

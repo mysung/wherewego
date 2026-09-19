@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { TrekSpace, TrekPlan, Member, Waypoint } from './types';
 import { INITIAL_SPACES, INITIAL_MEMBERS } from './data/initialData';
 import { Header } from './components/Header';
@@ -17,16 +17,22 @@ import { AddWaypointModal } from './components/AddWaypointModal';
 import { MemberManageModal } from './components/MemberManageModal';
 import { EditPlanModal } from './components/EditPlanModal';
 import { AllPlansModal } from './components/AllPlansModal';
+import { GripVertical } from 'lucide-react';
 
-const STORAGE_KEY = 'wherewego_trek_space_v3';
+const STORAGE_KEY = 'wherewego_trek_space_v4';
+const STORAGE_SPLIT_WIDTH_KEY = 'wherewego_split_panel_width';
 
 export default function App() {
   // Load initial space from localStorage or fallback
   const [space, setSpace] = useState<TrekSpace>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('wherewego_trek_space_v3');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.title && parsed.title.includes('8인')) {
+          parsed.title = parsed.title.replace('8인 ', '').replace(' 8인', '');
+        }
+        return parsed;
       }
     } catch (e) {
       console.error(e);
@@ -67,6 +73,67 @@ export default function App() {
     }
     return 'split';
   });
+
+  // Adjustable split panel width percentage (left panel width in %, default 35%)
+  const [leftPanelPercent, setLeftPanelPercent] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_SPLIT_WIDTH_KEY);
+      if (saved) {
+        const num = parseFloat(saved);
+        if (num >= 20 && num <= 70) return num;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return 35; // Default ~35% for left proposal list, 65% for map
+  });
+
+  const [isDraggingDivider, setIsDraggingDivider] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Mouse move and mouse up handlers for smooth vertical divider dragging
+  const handleMouseDownDivider = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingDivider(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingDivider) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const offsetX = e.clientX - rect.left;
+      const newPercent = (offsetX / containerWidth) * 100;
+      // Restrict left panel between 20% and 65% so neither side collapses completely
+      const clamped = Math.min(Math.max(newPercent, 20), 65);
+      setLeftPanelPercent(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingDivider(false);
+      try {
+        localStorage.setItem(STORAGE_SPLIT_WIDTH_KEY, leftPanelPercent.toString());
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    // Add cursor styling to body while dragging
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDraggingDivider, leftPanelPercent]);
   const [spotCommentWaypoint, setSpotCommentWaypoint] = useState<Waypoint | null>(null);
   const [spotAlternativeWaypoint, setSpotAlternativeWaypoint] = useState<Waypoint | null>(null);
   const [copiedTextToast, setCopiedTextToast] = useState(false);
@@ -488,24 +555,39 @@ export default function App() {
         onDeletePlan={handleDeletePlan}
       />
 
-      {/* 3. Main Workspace: Split View (Left: Proposals / Waypoint Timeline & Feedback, Right: Interactive Map) */}
+      {/* 3. Main Workspace: Split View (Left: Proposals / Waypoint Timeline, Right: Interactive Map with Draggable Resizer) */}
       <main
+        ref={containerRef}
         className={`flex-1 w-full mx-auto overflow-hidden shadow-xs transition-all duration-300 ${
           mapLayout === 'fullscreen'
             ? 'fixed inset-0 z-50 bg-slate-900 flex flex-col'
             : mapLayout === 'wide'
-            ? 'max-w-[96rem] grid grid-cols-1 lg:grid-cols-12'
-            : 'max-w-7xl grid grid-cols-1 lg:grid-cols-12'
+            ? 'max-w-[96rem] flex flex-col lg:flex-row'
+            : 'max-w-7xl flex flex-col lg:flex-row'
         }`}
       >
-        {/* Left Column: Hidden on fullscreen map, narrowed on 'wide' map */}
+        {/* Left Column: Proposals / Waypoints list with adjustable width */}
         {mapLayout !== 'fullscreen' && (
           <div
-            className={`transition-all duration-300 bg-white border-r border-slate-200 ${
+            style={{
+              // On desktop (lg+), use dynamically calculated percentage from vertical resizer
+              // If mapLayout === 'wide', clamp it even tighter or respect user preference
+              flexBasis: undefined,
+            }}
+            className={`transition-[width] duration-75 bg-white flex flex-col shrink-0 ${
               mapLayout === 'wide'
-                ? 'lg:col-span-4 xl:col-span-3 h-[380px] lg:h-[calc(100vh-230px)] min-h-[360px]'
-                : 'lg:col-span-5 xl:col-span-4 h-[440px] lg:h-[calc(100vh-230px)] min-h-[400px]'
-            }`}
+                ? 'w-full lg:w-[28%] min-w-[280px] max-w-[420px]'
+                : 'w-full'
+            } h-[440px] lg:h-[calc(100vh-230px)] min-h-[400px]`}
+            {...(mapLayout === 'split'
+              ? {
+                  style: {
+                    width: `${leftPanelPercent}%`,
+                    minWidth: '280px',
+                    maxWidth: '65%',
+                  },
+                }
+              : {})}
           >
             <WaypointList
               plans={space.plans}
@@ -535,15 +617,44 @@ export default function App() {
           </div>
         )}
 
-        {/* Right Column: Interactive Map with Dynamic Sizing */}
+        {/* Vertical Resizer Divider Bar (Desktop lg+) */}
+        {mapLayout !== 'fullscreen' && (
+          <div
+            onMouseDown={handleMouseDownDivider}
+            className={`hidden lg:flex items-center justify-center relative select-none z-20 group cursor-col-resize w-3.5 -mx-1.5 hover:w-4 hover:-mx-2 transition-all shrink-0 ${
+              isDraggingDivider ? 'bg-emerald-500/20' : 'hover:bg-emerald-500/10'
+            }`}
+            title="좌우로 드래그하여 제안 목록과 지도의 크기를 조절하세요"
+          >
+            {/* Thin vertical border line */}
+            <div
+              className={`w-[2px] h-full transition-colors ${
+                isDraggingDivider
+                  ? 'bg-emerald-600 shadow-[0_0_8px_rgba(5,150,105,0.6)]'
+                  : 'bg-slate-300 group-hover:bg-emerald-500'
+              }`}
+            />
+
+            {/* Centered Pill Handle Indicator */}
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 px-0.5 py-2.5 rounded-full border shadow-sm flex flex-col items-center justify-center transition-all ${
+                isDraggingDivider
+                  ? 'bg-[#064e3b] text-white border-emerald-500 scale-110'
+                  : 'bg-white text-slate-500 border-slate-300 group-hover:border-emerald-500 group-hover:text-emerald-700 group-hover:shadow-md'
+              }`}
+            >
+              <GripVertical className="w-3 h-3" />
+            </div>
+          </div>
+        )}
+
+        {/* Right Column: Interactive Map taking remaining flex space */}
         <div
-          className={`transition-all duration-300 bg-slate-900 relative ${
+          className={`flex-1 min-w-0 bg-slate-900 relative transition-all duration-300 ${
             mapLayout === 'fullscreen'
-              ? 'w-full h-full flex-1'
-              : mapLayout === 'wide'
-              ? 'lg:col-span-8 xl:col-span-9 h-[560px] lg:h-[calc(100vh-230px)] min-h-[480px]'
-              : 'lg:col-span-7 xl:col-span-8 h-[450px] lg:h-[calc(100vh-230px)] min-h-[420px]'
-          }`}
+              ? 'w-full h-full'
+              : 'w-full h-[450px] lg:h-[calc(100vh-230px)] min-h-[420px]'
+          } ${isDraggingDivider ? 'pointer-events-none' : ''}`}
         >
           <MapView
             plan={activePlan}

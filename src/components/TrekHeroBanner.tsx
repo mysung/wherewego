@@ -280,7 +280,7 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
                   <div className="flex items-center gap-1 hidden md:flex">
                     <Users className="w-3.5 h-3.5 text-emerald-300" />
                     <span>
-                      {space.members.length}인 참여 중 (현재 {activePlan?.votes.length || 0}표 확보)
+                      참여 {space.members.length}명 (현재 {activePlan?.votes.length || 0}표 확보)
                     </span>
                   </div>
                 </div>
