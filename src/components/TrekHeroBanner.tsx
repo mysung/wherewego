@@ -228,7 +228,7 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#064e3b] text-emerald-200 border border-emerald-400/40 shadow-xs">
                 <Compass className="w-3 h-3 text-emerald-300" />
-                <span>{space.members.length}인 단체 트레킹</span>
+                <span>단체 트레킹</span>
               </span>
 
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#881337] text-rose-100 border border-rose-400/40 shadow-xs">

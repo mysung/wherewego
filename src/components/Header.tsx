@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 max-w-4xl mx-auto w-full">
             <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
             <span>
-              🎉 8인 멤버 최종 합의 완료! <strong className="font-bold underline text-emerald-200">{finalPlan.title}</strong>(으)로 일정이 확정되었습니다.
+              🎉 참여 멤버 최종 합의 완료! <strong className="font-bold underline text-emerald-200">{finalPlan.title}</strong>(으)로 일정이 확정되었습니다.
             </span>
           </div>
         </div>
@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-slate-400"> ({totalVotesCast}/{space.members.length} 투표)</span>
             </div>
 
-            {/* Edit 8 members button */}
+            {/* Edit members button */}
             <button
               onClick={onOpenMemberManage}
               className="flex items-center gap-1 text-[11px] text-[#881337] hover:text-[#9f1239] bg-rose-50/80 hover:bg-rose-100/70 border border-rose-200 px-2 py-1 rounded-md transition-colors ml-0.5 font-semibold cursor-pointer"
-              title="방장을 포함한 8명 멤버 이름 및 정보 편집"
+              title="방장을 포함한 참여 멤버 명단 및 정보 관리"
             >
               <UserCog className="w-3 h-3 text-[#881337]" />
               <span>이름 편집</span>

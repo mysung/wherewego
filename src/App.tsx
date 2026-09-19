@@ -58,6 +58,15 @@ export default function App() {
   const [isAllPlansOpen, setIsAllPlansOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<TrekPlan | null>(null);
   const [leftPanelView, setLeftPanelView] = useState<'proposals' | 'waypoints'>('proposals');
+  const [mapLayout, setMapLayout] = useState<'split' | 'wide' | 'fullscreen'>(() => {
+    try {
+      const saved = localStorage.getItem('wherewego_map_layout');
+      if (saved === 'split' || saved === 'wide' || saved === 'fullscreen') return saved;
+    } catch (e) {
+      console.error(e);
+    }
+    return 'split';
+  });
   const [spotCommentWaypoint, setSpotCommentWaypoint] = useState<Waypoint | null>(null);
   const [spotAlternativeWaypoint, setSpotAlternativeWaypoint] = useState<Waypoint | null>(null);
   const [copiedTextToast, setCopiedTextToast] = useState(false);
@@ -480,38 +489,62 @@ export default function App() {
       />
 
       {/* 3. Main Workspace: Split View (Left: Proposals / Waypoint Timeline & Feedback, Right: Interactive Map) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 overflow-hidden shadow-xs">
-        {/* Left Column (4-5 cols on lg): Proposal Cards List OR Active Waypoint Timeline */}
-        <div className="lg:col-span-5 xl:col-span-4 h-[440px] lg:h-[calc(100vh-230px)] min-h-[400px] bg-white border-r border-slate-200">
-          <WaypointList
-            plans={space.plans}
-            activePlan={activePlan}
-            activePlanId={activePlanId}
-            onSelectPlan={(id) => {
-              setActivePlanId(id);
-              setSelectedWaypointId(null);
-              setLeftPanelView('waypoints');
-            }}
-            currentMember={currentMember}
-            members={space.members}
-            selectedWaypointId={selectedWaypointId}
-            onSelectWaypoint={(id) => setSelectedWaypointId(id)}
-            onVoteSpot={handleVoteSpot}
-            onOpenSpotComments={(wp) => setSpotCommentWaypoint(wp)}
-            onOpenAlternative={(wp) => setSpotAlternativeWaypoint(wp)}
-            onAddWaypointClick={() => setIsAddWaypointOpen(true)}
-            onEditPlan={handleOpenEditPlan}
-            onDeletePlan={handleDeletePlan}
-            onForkPlan={handleOpenFork}
-            onOpenAIGenerator={() => setIsAIGeneratorOpen(true)}
-            onOpenAllPlansModal={() => setIsAllPlansOpen(true)}
-            viewMode={leftPanelView}
-            onViewModeChange={(mode) => setLeftPanelView(mode)}
-          />
-        </div>
+      <main
+        className={`flex-1 w-full mx-auto overflow-hidden shadow-xs transition-all duration-300 ${
+          mapLayout === 'fullscreen'
+            ? 'fixed inset-0 z-50 bg-slate-900 flex flex-col'
+            : mapLayout === 'wide'
+            ? 'max-w-[96rem] grid grid-cols-1 lg:grid-cols-12'
+            : 'max-w-7xl grid grid-cols-1 lg:grid-cols-12'
+        }`}
+      >
+        {/* Left Column: Hidden on fullscreen map, narrowed on 'wide' map */}
+        {mapLayout !== 'fullscreen' && (
+          <div
+            className={`transition-all duration-300 bg-white border-r border-slate-200 ${
+              mapLayout === 'wide'
+                ? 'lg:col-span-4 xl:col-span-3 h-[380px] lg:h-[calc(100vh-230px)] min-h-[360px]'
+                : 'lg:col-span-5 xl:col-span-4 h-[440px] lg:h-[calc(100vh-230px)] min-h-[400px]'
+            }`}
+          >
+            <WaypointList
+              plans={space.plans}
+              activePlan={activePlan}
+              activePlanId={activePlanId}
+              onSelectPlan={(id) => {
+                setActivePlanId(id);
+                setSelectedWaypointId(null);
+                setLeftPanelView('waypoints');
+              }}
+              currentMember={currentMember}
+              members={space.members}
+              selectedWaypointId={selectedWaypointId}
+              onSelectWaypoint={(id) => setSelectedWaypointId(id)}
+              onVoteSpot={handleVoteSpot}
+              onOpenSpotComments={(wp) => setSpotCommentWaypoint(wp)}
+              onOpenAlternative={(wp) => setSpotAlternativeWaypoint(wp)}
+              onAddWaypointClick={() => setIsAddWaypointOpen(true)}
+              onEditPlan={handleOpenEditPlan}
+              onDeletePlan={handleDeletePlan}
+              onForkPlan={handleOpenFork}
+              onOpenAIGenerator={() => setIsAIGeneratorOpen(true)}
+              onOpenAllPlansModal={() => setIsAllPlansOpen(true)}
+              viewMode={leftPanelView}
+              onViewModeChange={(mode) => setLeftPanelView(mode)}
+            />
+          </div>
+        )}
 
-        {/* Right Column (7-8 cols on lg): Interactive Map with Route & Pins */}
-        <div className="lg:col-span-7 xl:col-span-8 h-[450px] lg:h-[calc(100vh-230px)] min-h-[420px] bg-slate-900">
+        {/* Right Column: Interactive Map with Dynamic Sizing */}
+        <div
+          className={`transition-all duration-300 bg-slate-900 relative ${
+            mapLayout === 'fullscreen'
+              ? 'w-full h-full flex-1'
+              : mapLayout === 'wide'
+              ? 'lg:col-span-8 xl:col-span-9 h-[560px] lg:h-[calc(100vh-230px)] min-h-[480px]'
+              : 'lg:col-span-7 xl:col-span-8 h-[450px] lg:h-[calc(100vh-230px)] min-h-[420px]'
+          }`}
+        >
           <MapView
             plan={activePlan}
             currentMember={currentMember}
@@ -520,6 +553,15 @@ export default function App() {
             onVoteSpot={handleVoteSpot}
             onOpenSpotComments={(wp) => setSpotCommentWaypoint(wp)}
             onOpenAlternative={(wp) => setSpotAlternativeWaypoint(wp)}
+            mapLayout={mapLayout}
+            onChangeMapLayout={(layout) => {
+              setMapLayout(layout);
+              try {
+                localStorage.setItem('wherewego_map_layout', layout);
+              } catch (e) {
+                console.error(e);
+              }
+            }}
           />
         </div>
       </main>
