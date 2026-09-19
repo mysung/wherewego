@@ -62,7 +62,7 @@ export const BANNER_PRESETS: BannerPreset[] = [
     name: '한라산 영실코스 기암괴석과 구름길',
     location: '제주 한라산 영실~윗세오름',
     tag: '제주 비경',
-    url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1800&q=80',
+    url: '/hallasan-yeongsil.jpg',
     mood: '사계절 변화무쌍한 구름과 화산석이 빚어낸 천혜의 산책로',
   },
   {
@@ -91,7 +91,7 @@ export const BANNER_PRESETS: BannerPreset[] = [
   },
 ];
 
-const STORAGE_BANNER_KEY = 'wherewego_trek_banner_img_v2';
+const STORAGE_BANNER_KEY = 'wherewego_trek_banner_img_v3';
 const STORAGE_COLLAPSED_KEY = 'wherewego_trek_banner_collapsed_v1';
 
 interface TrekHeroBannerProps {
@@ -105,8 +105,14 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
   // Current active background image
   const [currentImage, setCurrentImage] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_BANNER_KEY);
-      if (saved) return saved;
+      const saved = localStorage.getItem(STORAGE_BANNER_KEY) || localStorage.getItem('wherewego_trek_banner_img_v2');
+      if (saved) {
+        // If previous saved image was the old incorrect photo, migrate to authentic Hallasan
+        if (saved.includes('1578632767115-351597cf2477')) {
+          return '/hallasan-yeongsil.jpg';
+        }
+        return saved;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -189,19 +195,30 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
     <div className="relative w-full border-b border-slate-200 overflow-hidden bg-slate-900 select-none">
       {/* 1. Background Image with Rich Forest Green & Deep Wine Vignette Gradient */}
       <div
-        className={`relative w-full transition-all duration-300 bg-cover bg-center ${
+        className={`relative w-full transition-all duration-300 overflow-hidden bg-slate-900 ${
           isCollapsed ? 'h-14 sm:h-16' : 'h-36 sm:h-44 md:h-48'
         }`}
-        style={{
-          backgroundImage: `url('${currentImage}')`,
-        }}
       >
+        <img
+          src={currentImage}
+          alt="트레킹 배경 파노라마"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            if (target.src !== BANNER_PRESETS[0].url) {
+              target.src = BANNER_PRESETS[0].url;
+            }
+          }}
+          className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-500"
+        />
+
         {/* Dual Tone Atmosphere Overlay:
-            Left/Top: Deep Forest Green (#064e3b/85%)
-            Right/Bottom: Sophisticated Wine Bordeaux (#881337/80%)
+            Left/Top: Deep Forest Green (#064e3b/55%)
+            Right/Bottom: Sophisticated Wine Bordeaux (#881337/50%)
+            Center: Natural scenic transparency with subtle darkening for crystal-clear readability
         */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#064e3b]/85 via-slate-900/65 to-[#881337]/80" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#064e3b]/60 via-slate-900/35 to-[#881337]/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/55" />
 
         {/* 2. Banner Content Layer */}
         <div className="relative z-10 max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between">
@@ -216,12 +233,18 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
 
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#881337] text-rose-100 border border-rose-400/40 shadow-xs">
                 <Sparkles className="w-3 h-3 text-rose-200" />
-                <span>{activePreset?.tag || '감성 산행'}</span>
+                <span>
+                  {activePlan?.difficulty === '상'
+                    ? '도전 암릉 코스'
+                    : activePlan?.difficulty === '중'
+                    ? '능선 종주 산행'
+                    : '힐링 둘레길'}
+                </span>
               </span>
 
               {activePlan && (
                 <span className="text-[11px] text-emerald-100/90 hidden sm:inline-flex items-center gap-1">
-                  <span>추천 코스:</span>
+                  <span>선택된 코스:</span>
                   <strong className="text-white font-semibold underline decoration-emerald-300">
                     {activePlan.title}
                   </strong>
@@ -233,10 +256,10 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
             {!isCollapsed ? (
               <>
                 <h2 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-md leading-snug">
-                  자연이 부르는 길, 설레는 발걸음으로 함께 걷습니다
+                  {activePlan ? activePlan.title : space.title}
                 </h2>
                 <p className="text-xs sm:text-sm text-emerald-100/90 mt-1 line-clamp-1 drop-shadow font-medium">
-                  {activePreset?.mood ||
+                  {activePlan?.summary ||
                     `맑은 공기와 푸른 능선 속에서 ${space.members.length}명이 함께 완성해나가는 최적의 트레킹 여정`}
                 </p>
 
@@ -248,11 +271,17 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
                   </div>
                   <div className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-rose-300" />
-                    <span>{activePreset?.location || '아름다운 국립공원 트레일'}</span>
+                    <span>
+                      {activePlan?.startPoint
+                        ? `${activePlan.startPoint} ~ ${activePlan.endPoint || '원점회귀'}`
+                        : space.destination}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 hidden md:flex">
                     <Users className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>{space.members.length}인 참여 중 (현재 {activePlan.votes.length}표 확보)</span>
+                    <span>
+                      {space.members.length}인 참여 중 (현재 {activePlan?.votes.length || 0}표 확보)
+                    </span>
                   </div>
                 </div>
               </>
@@ -260,10 +289,10 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
               /* Compact bar when collapsed */
               <div className="flex items-center gap-3">
                 <h2 className="text-sm font-bold text-white truncate">
-                  트레킹 파노라마 • {activePreset?.name || '자연 산행 여정'}
+                  {activePlan ? activePlan.title : space.title}
                 </h2>
                 <span className="text-xs text-emerald-200/90 hidden sm:inline">
-                  ({space.members.length}인 맞춤형 코스 조율 중)
+                  • {activePlan?.startPoint || space.destination} ({activePlan?.votes.length || 0}표)
                 </span>
               </div>
             )}
@@ -355,6 +384,7 @@ export const TrekHeroBanner: React.FC<TrekHeroBannerProps> = ({ space, activePla
                           <img
                             src={preset.url}
                             alt={preset.name}
+                            referrerPolicy="no-referrer"
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             loading="lazy"
                           />

@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
               <span className="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-[#881337] font-semibold border border-rose-200/80 hidden sm:inline-block">
-                8인 트레킹 플래너
+                트레킹 플래너
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">

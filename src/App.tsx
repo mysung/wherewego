@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrekSpace, TrekPlan, Member, Waypoint } from './types';
 import { INITIAL_SPACES, INITIAL_MEMBERS } from './data/initialData';
 import { Header } from './components/Header';
+import { TrekHeroBanner } from './components/TrekHeroBanner';
 import { PlanTabBar } from './components/PlanTabBar';
 import { MapView } from './components/MapView';
 import { WaypointList } from './components/WaypointList';
@@ -456,6 +457,9 @@ export default function App() {
         onResetData={handleResetData}
         onOpenMemberManage={() => setIsMemberManageOpen(true)}
       />
+
+      {/* Trek Hero Banner (Inspiring trekking scenery photo band, customizable presets & mood) */}
+      <TrekHeroBanner space={space} activePlan={activePlan} />
 
       {/* 2. Plan Tab Bar (Tab comparison, quick stats, AI generate button, Fork button) */}
       <PlanTabBar
