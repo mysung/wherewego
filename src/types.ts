@@ -2,7 +2,7 @@ export type SpotType = 'START' | 'REST' | 'FOOD' | 'VIEW' | 'STAY' | 'END';
 
 export interface Member {
   id: string;
-  name: string; // 성(姓) 제외 이름 (예: 미영, 민수) 또는 닉네임
+  name: string; // 성(姓) 제외 이름 (예: 미님, 민수) 또는 닉네임
   gender: 'M' | 'F';
   role: '방장' | '멤버';
   avatarColor: string;

@@ -58,7 +58,7 @@ app.post('/api/ai/generate-plan', async (req: Request, res: Response) => {
         rawDest,
         difficulty || '중',
         targetDistanceKm || 8,
-        authorName || '미영',
+        authorName || '미님',
         chosenStart,
         chosenEnd,
         !!isLoop
@@ -77,7 +77,7 @@ app.post('/api/ai/generate-plan', async (req: Request, res: Response) => {
 
 JSON 구조:
 {
-  "title": "플랜 제목 (예: 미영의 서울 남산타워 둘레길 힐링 코스)",
+  "title": "플랜 제목 (예: 미님의 서울 남산타워 둘레길 힐링 코스)",
   "startPoint": "${chosenStart}",
   "endPoint": "${chosenEnd}",
   "totalDistance": "6.5km",
@@ -119,7 +119,7 @@ JSON 구조:
 희망 난이도: ${difficulty || '중'}
 희망 거리: 약 ${targetDistanceKm || 8}km
 우선순위/테마: ${priority || '경치 및 휴식'}
-기획자 이름: ${authorName || '미영'}
+기획자 이름: ${authorName || '미님'}
 요청사항: ${prompt || '체력이 약한 멤버를 배려해 쾌적한 쉼터와 전망대, 하산 후 맛집이 있는 코스로 부탁해'}`;
 
     let response;
@@ -174,7 +174,7 @@ JSON 구조:
       dest,
       req.body.difficulty || '중',
       req.body.targetDistanceKm || 8,
-      req.body.authorName || '미영',
+      req.body.authorName || '미님',
       chosenStart,
       chosenEnd,
       !!req.body.isLoop

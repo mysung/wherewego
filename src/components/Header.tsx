@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Member, TrekSpace, TrekPlan } from '../types';
-import { Mountain, Users, Share2, Copy, Check, Sparkles, Trophy, Award, Shield } from 'lucide-react';
+import { Mountain, Users, Share2, Copy, Check, Sparkles, Trophy, Award, Shield, UserCog } from 'lucide-react';
 
 interface HeaderProps {
   space: TrekSpace;
@@ -13,6 +13,7 @@ interface HeaderProps {
   onCopyKakaoText: () => void;
   copiedText: boolean;
   onResetData: () => void;
+  onOpenMemberManage: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onCopyKakaoText,
   copiedText,
   onResetData,
+  onOpenMemberManage,
 }) => {
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
 
@@ -37,11 +39,11 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
       {/* Top Banner if plan is confirmed */}
       {finalPlan && (
-        <div className="bg-emerald-600 text-white px-4 py-1.5 text-xs sm:text-sm font-medium flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#064e3b] via-[#047857] to-[#881337] text-white px-4 py-1.5 text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2 max-w-4xl mx-auto w-full">
             <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
             <span>
-              🎉 8인 멤버 최종 합의 완료! <strong className="font-bold underline">{finalPlan.title}</strong>(으)로 일정이 확정되었습니다.
+              🎉 8인 멤버 최종 합의 완료! <strong className="font-bold underline text-emerald-200">{finalPlan.title}</strong>(으)로 일정이 확정되었습니다.
             </span>
           </div>
         </div>
@@ -50,18 +52,19 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         {/* Left: Brand & Space Info */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
-            <Mountain className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-[#064e3b] text-white flex items-center justify-center shadow-sm shrink-0 border border-emerald-600/50 relative">
+            <Mountain className="w-6 h-6 text-emerald-100" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#881337] border-2 border-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
                 <span>어디갈까</span>
-                <span className="text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                <span className="text-xs sm:text-sm font-bold text-[#064e3b] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   WhereWeGo
                 </span>
               </h1>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium hidden sm:inline-block">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-[#881337] font-semibold border border-rose-200/80 hidden sm:inline-block">
                 8인 트레킹 플래너
               </span>
             </div>
@@ -70,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-slate-300">•</span>
               <span>{space.date}</span>
               <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="text-emerald-600 font-medium hidden sm:inline">
+              <span className="text-[#064e3b] font-bold hidden sm:inline">
                 {space.destination}
               </span>
             </div>
@@ -91,30 +94,40 @@ export const Header: React.FC<HeaderProps> = ({
                     key={m.id}
                     onClick={() => onSelectMember(m)}
                     title={`${m.name} (${m.gender === 'M' ? '남' : '여'}, 체력 ${m.fitnessLevel}${m.role === '방장' ? ', 방장' : ''}) - ${hasVoted ? '투표 완료' : '미투표'}`}
-                    className={`relative w-7 h-7 rounded-full text-white text-[11px] font-bold flex items-center justify-center border-2 transition-transform hover:scale-110 ${
-                      isCurrent ? 'ring-2 ring-emerald-500 border-white z-10' : 'border-white'
+                    className={`relative w-7 h-7 rounded-full text-white text-[11px] font-bold flex items-center justify-center border-2 transition-transform hover:scale-110 cursor-pointer ${
+                      isCurrent ? 'ring-2 ring-[#064e3b] border-white z-10 scale-105' : 'border-white'
                     }`}
                     style={{ backgroundColor: m.avatarColor }}
                   >
                     {m.name.slice(0, 1)}
                     {hasVoted && (
-                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-white" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#064e3b] rounded-full border border-white" />
                     )}
                   </button>
                 );
               })}
             </div>
             <div className="text-[11px] text-slate-600 pl-1 font-medium hidden sm:block">
-              참여 <strong className="text-emerald-700">{space.members.length}명</strong>
+              참여 <strong className="text-[#064e3b]">{space.members.length}명</strong>
               <span className="text-slate-400"> ({totalVotesCast}/{space.members.length} 투표)</span>
             </div>
+
+            {/* Edit 8 members button */}
+            <button
+              onClick={onOpenMemberManage}
+              className="flex items-center gap-1 text-[11px] text-[#881337] hover:text-[#9f1239] bg-rose-50/80 hover:bg-rose-100/70 border border-rose-200 px-2 py-1 rounded-md transition-colors ml-0.5 font-semibold cursor-pointer"
+              title="방장을 포함한 8명 멤버 이름 및 정보 편집"
+            >
+              <UserCog className="w-3 h-3 text-[#881337]" />
+              <span>이름 편집</span>
+            </button>
           </div>
 
           {/* Current User Switcher dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowMemberDropdown(!showMemberDropdown)}
-              className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium transition-colors cursor-pointer"
             >
               <span
                 className="w-2.5 h-2.5 rounded-full"
@@ -122,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
               />
               <span>나: <strong>{currentMember.name}</strong></span>
               {currentMember.role === '방장' && (
-                <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-semibold">
+                <span className="text-[10px] bg-[#881337] text-white px-1.5 py-0.2 rounded font-semibold">
                   방장
                 </span>
               )}
@@ -142,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
                         onSelectMember(m);
                         setShowMemberDropdown(false);
                       }}
-                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 ${
-                        m.id === currentMember.id ? 'bg-emerald-50/70 font-semibold text-emerald-900' : 'text-slate-700'
+                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 cursor-pointer ${
+                        m.id === currentMember.id ? 'bg-emerald-50/90 font-bold text-[#064e3b]' : 'text-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -160,6 +173,20 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
                   ))}
+                </div>
+
+                {/* Edit 8 members option in dropdown */}
+                <div className="p-1 border-t border-slate-100 bg-slate-50/60 rounded-b-xl">
+                  <button
+                    onClick={() => {
+                      setShowMemberDropdown(false);
+                      onOpenMemberManage();
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-1.5 text-[#064e3b] hover:bg-emerald-50 rounded-lg font-semibold transition-colors cursor-pointer"
+                  >
+                    <UserCog className="w-3.5 h-3.5 text-[#064e3b]" />
+                    <span>8인 멤버 이름 편집 / 방장 설정</span>
+                  </button>
                 </div>
               </div>
             )}

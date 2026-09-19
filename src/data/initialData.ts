@@ -1,7 +1,7 @@
 import { TrekSpace, Member } from '../types';
 
 export const INITIAL_MEMBERS: Member[] = [
-  { id: 'm1', name: '미영', gender: 'F', role: '방장', avatarColor: '#ec4899', fitnessLevel: '하' },
+  { id: 'm1', name: '미님', gender: 'F', role: '방장', avatarColor: '#ec4899', fitnessLevel: '하' },
   { id: 'm2', name: '민수', gender: 'M', role: '멤버', avatarColor: '#3b82f6', fitnessLevel: '상' },
   { id: 'm3', name: '철수', gender: 'M', role: '멤버', avatarColor: '#10b981', fitnessLevel: '중' },
   { id: 'm4', name: '서연', gender: 'F', role: '멤버', avatarColor: '#8b5cf6', fitnessLevel: '중' },
@@ -24,9 +24,9 @@ export const INITIAL_SPACES: TrekSpace[] = [
       {
         id: 'plan-namsan-a',
         spaceId: 'space-jirisan-01',
-        title: '미영의 남산타워 힐링 둘레길 코스 (도심 숲길·전망)',
+        title: '미님의 남산타워 힐링 둘레길 코스 (도심 숲길·전망)',
         authorId: 'm1',
-        authorDisplayName: '미영',
+        authorDisplayName: '미님',
         isPublished: true,
         startPoint: '남산 백범광장 & 한양도성 탐방로 입구',
         endPoint: '남산 백범광장 & 회현역 (원점회귀)',
@@ -54,7 +54,7 @@ export const INITIAL_SPACES: TrekSpace[] = [
               {
                 id: 'c-n-1',
                 userId: 'm1',
-                displayName: '미영',
+                displayName: '미님',
                 text: '백범광장 분수대 앞에서 9시 30분까지 모여요!',
                 createdAt: '2026-09-15T09:15:00Z',
               },
@@ -133,9 +133,9 @@ export const INITIAL_SPACES: TrekSpace[] = [
       {
         id: 'plan-jiri-a',
         spaceId: 'space-jirisan-01',
-        title: '미영의 힐링 완주 코스 (여유·전망)',
+        title: '미님의 힐링 완주 코스 (여유·전망)',
         authorId: 'm1',
-        authorDisplayName: '미영',
+        authorDisplayName: '미님',
         isPublished: true,
         startPoint: '성삼재 주차장 & 탐방로 입구',
         endPoint: '성삼재 원점회귀 & 해산',
@@ -205,7 +205,7 @@ export const INITIAL_SPACES: TrekSpace[] = [
               {
                 id: 'c-3',
                 userId: 'm1',
-                displayName: '미영',
+                displayName: '미님',
                 text: '여기서 보온병에 담아온 온수로 컵라면 먹거나 과일 나눠먹어요~',
                 createdAt: '2026-09-15T11:30:00Z',
               },

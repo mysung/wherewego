@@ -13,8 +13,11 @@ import { SpotCommentModal } from './components/SpotCommentModal';
 import { KakaoShareModal } from './components/KakaoShareModal';
 import { ForkPlanModal } from './components/ForkPlanModal';
 import { AddWaypointModal } from './components/AddWaypointModal';
+import { MemberManageModal } from './components/MemberManageModal';
+import { EditPlanModal } from './components/EditPlanModal';
+import { AllPlansModal } from './components/AllPlansModal';
 
-const STORAGE_KEY = 'wherewego_trek_space_v2';
+const STORAGE_KEY = 'wherewego_trek_space_v3';
 
 export default function App() {
   // Load initial space from localStorage or fallback
@@ -30,7 +33,7 @@ export default function App() {
     return INITIAL_SPACES[0];
   });
 
-  // Current logged in member (simulated from the 8 members: default 미영)
+  // Current logged in member (simulated from the 8 members: default 미님)
   const [currentMember, setCurrentMember] = useState<Member>(() => {
     return space.members[0] || INITIAL_MEMBERS[0];
   });
@@ -50,6 +53,10 @@ export default function App() {
   const [isForkOpen, setIsForkOpen] = useState(false);
   const [forkSourcePlan, setForkSourcePlan] = useState<TrekPlan | null>(null);
   const [isAddWaypointOpen, setIsAddWaypointOpen] = useState(false);
+  const [isMemberManageOpen, setIsMemberManageOpen] = useState(false);
+  const [isAllPlansOpen, setIsAllPlansOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<TrekPlan | null>(null);
+  const [leftPanelView, setLeftPanelView] = useState<'proposals' | 'waypoints'>('proposals');
   const [spotCommentWaypoint, setSpotCommentWaypoint] = useState<Waypoint | null>(null);
   const [spotAlternativeWaypoint, setSpotAlternativeWaypoint] = useState<Waypoint | null>(null);
   const [copiedTextToast, setCopiedTextToast] = useState(false);
@@ -263,6 +270,49 @@ export default function App() {
     setActivePlanId(forkedPlan.id);
   };
 
+  // Edit Course Proposal
+  const handleOpenEditPlan = (plan: TrekPlan) => {
+    setEditingPlan(plan);
+  };
+
+  const handleSaveUpdatedPlan = (updatedPlan: TrekPlan) => {
+    setSpace((prev) => ({
+      ...prev,
+      plans: prev.plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p)),
+    }));
+  };
+
+  // Delete Course Proposal
+  const handleDeletePlan = (planId: string) => {
+    if (space.plans.length <= 1) {
+      alert('최소 1개의 코스 제안이 유지되어야 합니다. 삭제 대신 코스 정보 편집을 이용해 주세요.');
+      return;
+    }
+
+    const targetPlan = space.plans.find((p) => p.id === planId);
+    const planTitle = targetPlan ? targetPlan.title : '선택한 코스';
+
+    if (window.confirm(`'${planTitle}' 코스 제안을 정말 삭제하시겠습니까?`)) {
+      setSpace((prev) => {
+        const remainingPlans = prev.plans.filter((p) => p.id !== planId);
+        return {
+          ...prev,
+          finalPlanId: prev.finalPlanId === planId ? null : prev.finalPlanId,
+          plans: remainingPlans,
+        };
+      });
+
+      // If active plan was deleted, select next remaining plan
+      if (activePlanId === planId) {
+        const remainingPlans = space.plans.filter((p) => p.id !== planId);
+        if (remainingPlans.length > 0) {
+          setActivePlanId(remainingPlans[0].id);
+          setSelectedWaypointId(null);
+        }
+      }
+    }
+  };
+
   // Add new waypoint to active plan
   const handleAddWaypoint = (newWpData: Omit<Waypoint, 'id' | 'upVotes' | 'downVotes' | 'comments'>) => {
     const newWp: Waypoint = {
@@ -339,9 +389,50 @@ export default function App() {
     setTimeout(() => setCopiedTextToast(false), 2500);
   };
 
+  // Update 8 members (including host) and sync across active state
+  const handleSaveMembers = (updatedMembers: Member[]) => {
+    // Find if currentMember's name or attributes changed
+    const updatedCurrent = updatedMembers.find((m) => m.id === currentMember.id);
+    if (updatedCurrent) {
+      setCurrentMember(updatedCurrent);
+    }
+
+    // Also synchronize authorDisplayName and comment displayName across plans so that existing comments/plans reflect new names
+    setSpace((prev) => {
+      const memberMap = new Map(updatedMembers.map((m) => [m.id, m]));
+
+      const updatedPlans = prev.plans.map((plan) => {
+        const planAuthor = memberMap.get(plan.authorId);
+        const updatedAuthorName = planAuthor ? planAuthor.name : plan.authorDisplayName;
+
+        const updatedWaypoints = plan.waypoints.map((wp) => {
+          const updatedComments = wp.comments.map((c) => {
+            const commentAuthor = memberMap.get(c.userId);
+            return commentAuthor
+              ? { ...c, displayName: commentAuthor.name }
+              : c;
+          });
+          return { ...wp, comments: updatedComments };
+        });
+
+        return {
+          ...plan,
+          authorDisplayName: updatedAuthorName,
+          waypoints: updatedWaypoints,
+        };
+      });
+
+      return {
+        ...prev,
+        members: updatedMembers,
+        plans: updatedPlans,
+      };
+    });
+  };
+
   // Reset to initial data
   const handleResetData = () => {
-    if (window.confirm('지리산 8인 트레킹 기본 데이터로 초기화하시겠습니까?')) {
+    if (window.confirm('기본 8인 트레킹 데이터로 초기화하시겠습니까?')) {
       localStorage.removeItem(STORAGE_KEY);
       setSpace(INITIAL_SPACES[0]);
       setActivePlanId(INITIAL_SPACES[0].plans[0].id);
@@ -363,6 +454,7 @@ export default function App() {
         onCopyKakaoText={handleCopyKakaoText}
         copiedText={copiedTextToast}
         onResetData={handleResetData}
+        onOpenMemberManage={() => setIsMemberManageOpen(true)}
       />
 
       {/* 2. Plan Tab Bar (Tab comparison, quick stats, AI generate button, Fork button) */}
@@ -372,26 +464,45 @@ export default function App() {
         onSelectPlan={(id) => {
           setActivePlanId(id);
           setSelectedWaypointId(null);
+          setLeftPanelView('waypoints');
         }}
         onOpenAIGenerator={() => setIsAIGeneratorOpen(true)}
         onForkPlan={handleOpenFork}
         onOpenVerify={() => setIsVerifyOpen(true)}
         currentMember={currentMember}
+        onOpenAllPlans={() => setLeftPanelView('proposals')}
+        onEditPlan={handleOpenEditPlan}
+        onDeletePlan={handleDeletePlan}
       />
 
-      {/* 3. Main Workspace: Split View (Left: Waypoint Timeline & Feedback, Right: Interactive Map) */}
+      {/* 3. Main Workspace: Split View (Left: Proposals / Waypoint Timeline & Feedback, Right: Interactive Map) */}
       <main className="flex-1 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 overflow-hidden shadow-xs">
-        {/* Left Column (4 cols on lg): Waypoint Timeline, Spot Feedbacks, AI Notes */}
-        <div className="lg:col-span-5 xl:col-span-4 h-[420px] lg:h-[calc(100vh-230px)] min-h-[380px] bg-white border-r border-slate-200">
+        {/* Left Column (4-5 cols on lg): Proposal Cards List OR Active Waypoint Timeline */}
+        <div className="lg:col-span-5 xl:col-span-4 h-[440px] lg:h-[calc(100vh-230px)] min-h-[400px] bg-white border-r border-slate-200">
           <WaypointList
-            plan={activePlan}
+            plans={space.plans}
+            activePlan={activePlan}
+            activePlanId={activePlanId}
+            onSelectPlan={(id) => {
+              setActivePlanId(id);
+              setSelectedWaypointId(null);
+              setLeftPanelView('waypoints');
+            }}
             currentMember={currentMember}
+            members={space.members}
             selectedWaypointId={selectedWaypointId}
             onSelectWaypoint={(id) => setSelectedWaypointId(id)}
             onVoteSpot={handleVoteSpot}
             onOpenSpotComments={(wp) => setSpotCommentWaypoint(wp)}
             onOpenAlternative={(wp) => setSpotAlternativeWaypoint(wp)}
             onAddWaypointClick={() => setIsAddWaypointOpen(true)}
+            onEditPlan={handleOpenEditPlan}
+            onDeletePlan={handleDeletePlan}
+            onForkPlan={handleOpenFork}
+            onOpenAIGenerator={() => setIsAIGeneratorOpen(true)}
+            onOpenAllPlansModal={() => setIsAllPlansOpen(true)}
+            viewMode={leftPanelView}
+            onViewModeChange={(mode) => setLeftPanelView(mode)}
           />
         </div>
 
@@ -480,6 +591,40 @@ export default function App() {
         isOpen={isAddWaypointOpen}
         onClose={() => setIsAddWaypointOpen(false)}
         onAddWaypoint={handleAddWaypoint}
+      />
+
+      {/* 8-Member Name & Host Management Modal */}
+      <MemberManageModal
+        isOpen={isMemberManageOpen}
+        onClose={() => setIsMemberManageOpen(false)}
+        members={space.members}
+        currentMember={currentMember}
+        onSaveMembers={handleSaveMembers}
+      />
+
+      {/* All Course Proposals List Modal */}
+      <AllPlansModal
+        isOpen={isAllPlansOpen}
+        onClose={() => setIsAllPlansOpen(false)}
+        plans={space.plans}
+        activePlanId={activePlanId}
+        members={space.members}
+        onSelectPlan={(id) => {
+          setActivePlanId(id);
+          setSelectedWaypointId(null);
+        }}
+        onEditPlan={handleOpenEditPlan}
+        onDeletePlan={handleDeletePlan}
+        onForkPlan={handleOpenFork}
+        onOpenCreatePlan={() => setIsAIGeneratorOpen(true)}
+      />
+
+      {/* Edit Course Proposal Modal */}
+      <EditPlanModal
+        isOpen={!!editingPlan}
+        onClose={() => setEditingPlan(null)}
+        plan={editingPlan}
+        onSavePlan={handleSaveUpdatedPlan}
       />
     </div>
   );

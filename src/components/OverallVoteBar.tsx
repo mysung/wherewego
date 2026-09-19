@@ -40,26 +40,26 @@ export const OverallVoteBar: React.FC<OverallVoteBarProps> = ({
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shrink-0 ${
                 isFinalPlan
-                  ? 'bg-amber-500 shadow-xs'
+                  ? 'bg-gradient-to-br from-[#064e3b] to-[#881337] shadow-xs'
                   : hasVotedForActivePlan
-                  ? 'bg-emerald-600'
-                  : 'bg-slate-700'
+                  ? 'bg-[#064e3b]'
+                  : 'bg-slate-800'
               }`}
             >
-              {isFinalPlan ? <Trophy className="w-5 h-5 text-white" /> : <ThumbsUp className="w-5 h-5" />}
+              {isFinalPlan ? <Trophy className="w-5 h-5 text-amber-300" /> : <ThumbsUp className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-500">
                   {isFinalPlan ? '최종 확정된 트레킹 코스' : '그룹 최종 의사결정 투표'}
                 </span>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200">
+                <span className="text-xs font-bold text-[#064e3b] bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200">
                   {totalVotesCount}/{space.members.length}명 참여 완료
                 </span>
               </div>
               <h4 className="font-bold text-slate-900 text-sm sm:text-base">
                 {activePlan.title}{' '}
-                <span className="text-emerald-600 font-extrabold ml-1">
+                <span className="text-[#064e3b] font-extrabold ml-1">
                   ({activePlan.votes.length}표)
                 </span>
               </h4>
@@ -95,18 +95,18 @@ export const OverallVoteBar: React.FC<OverallVoteBarProps> = ({
             onClick={() => onVotePlan(activePlan.id)}
             className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer ${
               hasVotedForActivePlan
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
-                : 'bg-slate-900 hover:bg-slate-800 text-white'
+                ? 'bg-[#064e3b] hover:bg-[#047857] text-white ring-2 ring-emerald-400'
+                : 'bg-[#881337] hover:bg-[#9f1239] text-white shadow-md'
             }`}
           >
             {hasVotedForActivePlan ? (
               <>
-                <CheckCircle className="w-4 h-4 text-white" />
+                <CheckCircle className="w-4 h-4 text-emerald-300" />
                 <span>내 선택 완료 (클릭 시 취소)</span>
               </>
             ) : (
               <>
-                <ThumbsUp className="w-4 h-4 text-emerald-400" />
+                <ThumbsUp className="w-4 h-4 text-rose-200" />
                 <span>
                   {userVotedPlan ? '이 플랜으로 투표 변경' : '이 플랜으로 최종 투표하기'}
                 </span>
@@ -120,12 +120,12 @@ export const OverallVoteBar: React.FC<OverallVoteBarProps> = ({
               onClick={() => onFinalizePlan(activePlan.id)}
               className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-colors border cursor-pointer ${
                 isFinalPlan
-                  ? 'bg-amber-50 border-amber-300 text-amber-800'
-                  : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                  ? 'bg-rose-50 border-rose-300 text-[#881337]'
+                  : 'bg-white hover:bg-emerald-50 border-slate-300 hover:border-emerald-300 text-[#064e3b]'
               }`}
               title="모임 방장 권한으로 이 플랜을 최종 완주 코스로 확정합니다"
             >
-              <Shield className="w-4 h-4 text-amber-600" />
+              <Shield className={`w-4 h-4 ${isFinalPlan ? 'text-[#881337]' : 'text-[#064e3b]'}`} />
               <span>{isFinalPlan ? '확정 취소' : '최종 플랜 확정'}</span>
             </button>
           )}
