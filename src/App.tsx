@@ -95,18 +95,18 @@ export default function App() {
     });
   };
 
-  // Adjustable split panel width percentage (left panel width in %, default 35%)
+  // Adjustable split panel width percentage (left panel width in %, default 50% for equal split with map)
   const [leftPanelPercent, setLeftPanelPercent] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_SPLIT_WIDTH_KEY);
       if (saved) {
         const num = parseFloat(saved);
-        if (num >= 20 && num <= 70) return num;
+        if (num >= 20 && num <= 80) return num;
       }
     } catch (e) {
       console.error(e);
     }
-    return 35; // Default ~35% for left proposal list, 65% for map
+    return 50; // Default 50%: map occupies the right half of the landing page
   });
 
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
@@ -127,8 +127,8 @@ export default function App() {
       const containerWidth = rect.width;
       const offsetX = e.clientX - rect.left;
       const newPercent = (offsetX / containerWidth) * 100;
-      // Restrict left panel between 20% and 65% so neither side collapses completely
-      const clamped = Math.min(Math.max(newPercent, 20), 65);
+      // Restrict left panel between 20% and 75% so neither side collapses completely
+      const clamped = Math.min(Math.max(newPercent, 20), 75);
       setLeftPanelPercent(clamped);
     };
 
