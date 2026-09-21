@@ -173,7 +173,15 @@ export const PlanTabBar: React.FC<PlanTabBarProps> = ({
         </div>
 
         {/* Action Buttons: Edit, Delete, Fork, AI Generate */}
-        <div className="flex items-center gap-1.5 pb-2 md:pb-0 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 pb-2 md:pb-0 shrink-0 flex-wrap">
+          {/* Currently Selected Plan Title Tag */}
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50/90 border border-emerald-300 text-xs shadow-2xs">
+            <span className="text-slate-500 font-medium">선택 코스:</span>
+            <span className="font-bold text-[#064e3b] max-w-[200px] truncate" title={activePlan.title}>
+              {activePlan.title}
+            </span>
+          </div>
+
           <button
             onClick={() => onEditPlan(activePlan)}
             className="flex items-center gap-1 text-xs bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#064e3b] px-2.5 py-1.5 rounded-lg font-medium transition-colors border border-slate-300 hover:border-emerald-300 cursor-pointer"

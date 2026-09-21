@@ -36,7 +36,7 @@ interface MapViewProps {
   isMinimalMode?: boolean;
 }
 
-// Tile Layer configurations
+// Tile Layer configurations with reliable public tile servers
 const TILE_LAYERS = {
   terrain: {
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
@@ -54,10 +54,13 @@ const TILE_LAYERS = {
     },
   },
   standard: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    // CartoDB Voyager / OSM provides fast, CORS-friendly, reliable vector-style road & mountain baseline
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     options: {
       maxZoom: 19,
-      attribution: '© OpenStreetMap contributors',
+      subdomains: ['a', 'b', 'c', 'd'],
+      attribution: '© OpenStreetMap contributors, © CARTO',
     },
   },
 };
@@ -101,6 +104,19 @@ export const MapView: React.FC<MapViewProps> = ({
     // Add Tile Layer
     const currentConfig = TILE_LAYERS[mapMode];
     const tileLayer = L.tileLayer(currentConfig.url, currentConfig.options).addTo(map);
+    if (currentConfig.fallbackUrl) {
+      tileLayer.on('tileerror', (error) => {
+        const target = error.tile as HTMLImageElement;
+        if (target && !target.dataset.fallbackTried) {
+          target.dataset.fallbackTried = 'true';
+          const coords = error.coords;
+          target.src = currentConfig.fallbackUrl!
+            .replace('{z}', String(coords.z))
+            .replace('{x}', String(coords.x))
+            .replace('{y}', String(coords.y));
+        }
+      });
+    }
     tileLayerRef.current = tileLayer;
 
     // Layer group for markers and polyline
@@ -124,10 +140,36 @@ export const MapView: React.FC<MapViewProps> = ({
 
   // Update Tile Layer when mapMode changes
   useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
 
     const config = TILE_LAYERS[mapMode];
-    tileLayerRef.current.setUrl(config.url);
+    const newTileLayer = L.tileLayer(config.url, config.options).addTo(map);
+    
+    // Add fallback for tile loading errors
+    if (config.fallbackUrl) {
+      newTileLayer.on('tileerror', (error) => {
+        const target = error.tile as HTMLImageElement;
+        if (target && !target.dataset.fallbackTried) {
+          target.dataset.fallbackTried = 'true';
+          const coords = error.coords;
+          target.src = config.fallbackUrl!
+            .replace('{z}', String(coords.z))
+            .replace('{x}', String(coords.x))
+            .replace('{y}', String(coords.y));
+        }
+      });
+    }
+
+    tileLayerRef.current = newTileLayer;
+    
+    // In Leaflet, tile layers automatically sit in tilePane (z-index: 200),
+    // and markers/vectors sit in overlayPane/markerPane (z-index: 400/600),
+    // so markers and paths naturally render above the tile layer.
   }, [mapMode]);
 
   // Update Markers & Polyline when waypoints, plan, or selectedWaypointId changes

@@ -49,18 +49,30 @@ export const OverallVoteBar: React.FC<OverallVoteBarProps> = ({
               {isFinalPlan ? <Trophy className="w-5 h-5 text-amber-300" /> : <ThumbsUp className="w-5 h-5" />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-semibold text-slate-500">
-                  {isFinalPlan ? '최종 확정된 트레킹 코스' : '그룹 최종 의사결정 투표'}
+                  {isFinalPlan ? '최종 확정된 트레킹 코스' : '그룹 코스 투표'}
                 </span>
-                <span className="text-xs font-bold text-[#064e3b] bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200">
-                  {totalVotesCount}/{space.members.length}명 참여 완료
+                <span className="text-xs font-bold text-[#064e3b] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  전체 {totalVotesCount}/{space.members.length}명 투표완료
                 </span>
+                {/* Clear indicator of current user's personal vote */}
+                {userVotedPlan ? (
+                  <span className="text-[11px] font-medium text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                    {hasVotedForActivePlan
+                      ? '✓ 내가 투표한 코스'
+                      : `내가 투표한 코스: ${userVotedPlan.title}`}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    아직 미투표 (아래 버튼으로 투표하세요)
+                  </span>
+                )}
               </div>
-              <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+              <h4 className="font-bold text-slate-900 text-sm sm:text-base mt-0.5">
                 {activePlan.title}{' '}
                 <span className="text-[#064e3b] font-extrabold ml-1">
-                  ({activePlan.votes.length}표)
+                  (득표: {activePlan.votes.length}표)
                 </span>
               </h4>
             </div>

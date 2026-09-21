@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
                 트레킹 플래너
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 flex-wrap">
               <span className="font-semibold text-slate-800">{space.title}</span>
               <span className="text-slate-300">•</span>
               <span>{space.date}</span>
@@ -80,6 +80,15 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[#064e3b] font-bold hidden sm:inline">
                 {space.destination}
               </span>
+              {activePlan && (
+                <>
+                  <span className="text-slate-300 hidden md:inline">•</span>
+                  <span className="hidden md:inline-flex items-center gap-1 font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                    <span className="text-slate-500 font-normal">선택 코스:</span>
+                    <span className="text-[#064e3b]">{activePlan.title}</span>
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

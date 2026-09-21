@@ -28,6 +28,8 @@ import {
   Route,
   CheckCircle2,
   Crown,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface WaypointListProps {
@@ -90,6 +92,24 @@ export const WaypointList: React.FC<WaypointListProps> = ({
 
   // Find max votes for leader badge
   const maxVotes = Math.max(...plans.map((p) => p.votes.length), 0);
+
+  // Set of plan IDs that are expanded to show full details
+  const [expandedPlanIds, setExpandedPlanIds] = useState<Set<string>>(
+    () => new Set([activePlanId])
+  );
+
+  const toggleExpandPlan = (e: React.MouseEvent, planId: string) => {
+    e.stopPropagation();
+    setExpandedPlanIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(planId)) {
+        next.delete(planId);
+      } else {
+        next.add(planId);
+      }
+      return next;
+    });
+  };
 
   // Active plan index letter (A, B, C...)
   const activePlanIndex = plans.findIndex((p) => p.id === activePlan.id);
@@ -197,6 +217,7 @@ export const WaypointList: React.FC<WaypointListProps> = ({
             {/* Proposal Cards List */}
             {plans.map((plan, index) => {
               const isSelected = plan.id === activePlanId;
+              const isExpanded = expandedPlanIds.has(plan.id);
               const letter = String.fromCharCode(65 + index);
               const isLeading = plan.votes.length > 0 && plan.votes.length === maxVotes;
               const voterMembers = members.filter((m) => plan.votes.includes(m.id));
@@ -204,9 +225,9 @@ export const WaypointList: React.FC<WaypointListProps> = ({
               return (
                 <div
                   key={plan.id}
-                  onClick={() => {
+                  onClick={(e) => {
                     onSelectPlan(plan.id);
-                    setViewMode('waypoints');
+                    toggleExpandPlan(e, plan.id);
                   }}
                   className={`group relative rounded-xl p-3 sm:p-3.5 border transition-all cursor-pointer ${
                     isSelected
@@ -219,9 +240,9 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                     <div className="absolute left-6 -bottom-3.5 w-0.5 h-3 bg-slate-300 z-0" />
                   )}
 
-                  {/* Card Header: Letter, Title, AI Badge, Vote Badge */}
+                  {/* Card Header: Letter, Title, Badges, Votes, Expand Chevron */}
                   <div className="flex items-start justify-between gap-2 relative z-10">
-                    <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       {/* Letter Icon Badge */}
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
@@ -234,7 +255,7 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                       </div>
 
                       {/* Title & Author */}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-[#064e3b] transition-colors">
                             {plan.title}
@@ -257,24 +278,51 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                        {/* Essential summary row: Author & Key Specs at a glance */}
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1 flex-wrap">
                           <span>
                             제안: <strong className="text-slate-800">{plan.authorDisplayName}</strong>
                           </span>
                           <span>•</span>
-                          <span>경유지 {plan.waypoints.length}곳</span>
+                          <span className="font-semibold text-slate-700">{plan.totalDistance}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-slate-700">{plan.totalDuration}</span>
+                          <span
+                            className={`px-1 rounded text-[10px] font-semibold ${
+                              plan.difficulty === '하'
+                                ? 'bg-emerald-100 text-[#064e3b]'
+                                : plan.difficulty === '중'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-rose-100 text-[#881337]'
+                            }`}
+                          >
+                            난이도 {plan.difficulty}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Votes Count Badge */}
-                    <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
-                      <ThumbsUp className="w-3 h-3 text-[#064e3b]" />
-                      <span className="text-xs font-bold text-[#064e3b]">{plan.votes.length}표</span>
+                    {/* Votes Count Badge & Expand Toggle Chevron */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
+                        <ThumbsUp className="w-3 h-3 text-[#064e3b]" />
+                        <span className="text-xs font-bold text-[#064e3b]">{plan.votes.length}표</span>
+                      </div>
+                      <button
+                        onClick={(e) => toggleExpandPlan(e, plan.id)}
+                        className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        title={isExpanded ? '간략히 보기' : '상세 정보 펼치기'}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-slate-600" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
                     </div>
                   </div>
 
-                  {/* 들머리 (출발) ➔ 날머리 (도착) Strip */}
+                  {/* 들머리 (출발) ➔ 날머리 (도착) Strip - Always visible key info */}
                   <div className="mt-2 bg-slate-50/90 rounded-lg p-1.5 border border-slate-100 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 min-w-0 flex-1">
                       <MapPin className="w-3.5 h-3.5 text-[#064e3b] shrink-0" />
@@ -299,122 +347,127 @@ export const WaypointList: React.FC<WaypointListProps> = ({
                     </div>
                   </div>
 
-                  {/* Trail Metrics Specs (거리, 시간, 난이도) */}
-                  <div className={`mt-2 grid ${isMinimalMode ? 'grid-cols-3' : 'grid-cols-4'} gap-1.5 text-center text-[11px] bg-slate-50/50 p-1.5 rounded-lg border border-slate-100`}>
-                    <div>
-                      <div className="text-[10px] text-slate-400">거리</div>
-                      <div className="font-bold text-slate-800">{plan.totalDistance}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400">소요</div>
-                      <div className="font-bold text-slate-800">{plan.totalDuration}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400">난이도</div>
-                      <div className="font-bold text-slate-800">
-                        <span
-                          className={`px-1 rounded text-[10px] ${
-                            plan.difficulty === '하'
-                              ? 'bg-emerald-100 text-[#064e3b]'
-                              : plan.difficulty === '중'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-rose-100 text-[#881337]'
-                          }`}
-                        >
-                          {plan.difficulty}
-                        </span>
-                      </div>
-                    </div>
-                    {!isMinimalMode && (
-                      <div>
-                        <div className="text-[10px] text-slate-400">상승</div>
-                        <div className="font-bold text-slate-800">{plan.elevationGain || '-'}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Waypoints Sequence Preview & Summary (Hidden in minimal mode for clean focus) */}
-                  {!isMinimalMode && (
-                    <>
-                      <div className="mt-2 flex items-center gap-1 flex-wrap text-[10px]">
-                        <span className="text-slate-400 font-medium">동선:</span>
-                        {plan.waypoints.slice(0, 4).map((wp, wIdx) => (
-                          <span
-                            key={wp.id}
-                            className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
-                          >
-                            {wIdx + 1}. {wp.name}
-                          </span>
-                        ))}
-                        {plan.waypoints.length > 4 && (
-                          <span className="text-slate-400 font-medium">
-                            +{plan.waypoints.length - 4}곳
-                          </span>
+                  {/* EXPANDABLE SECTION: Full stats, Elevation, Waypoints, Summary, Actions */}
+                  {isExpanded && (
+                    <div className="mt-2 pt-2 border-t border-slate-100 space-y-2 animate-in fade-in duration-200">
+                      {/* Trail Metrics Specs (상승 고도 등 세부 스펙) */}
+                      <div className={`grid ${isMinimalMode ? 'grid-cols-3' : 'grid-cols-4'} gap-1.5 text-center text-[11px] bg-slate-50/60 p-1.5 rounded-lg border border-slate-100`}>
+                        <div>
+                          <div className="text-[10px] text-slate-400">거리</div>
+                          <div className="font-bold text-slate-800">{plan.totalDistance}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400">소요</div>
+                          <div className="font-bold text-slate-800">{plan.totalDuration}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400">난이도</div>
+                          <div className="font-bold text-slate-800">
+                            <span
+                              className={`px-1 rounded text-[10px] ${
+                                plan.difficulty === '하'
+                                  ? 'bg-emerald-100 text-[#064e3b]'
+                                  : plan.difficulty === '중'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-rose-100 text-[#881337]'
+                              }`}
+                            >
+                              {plan.difficulty}
+                            </span>
+                          </div>
+                        </div>
+                        {!isMinimalMode && (
+                          <div>
+                            <div className="text-[10px] text-slate-400">상승</div>
+                            <div className="font-bold text-slate-800">{plan.elevationGain || '-'}</div>
+                          </div>
                         )}
                       </div>
 
-                      {plan.summary && (
-                        <p className="mt-2 text-[11px] text-slate-600 line-clamp-2 bg-slate-50/70 p-1.5 rounded border border-slate-100/70">
-                          {plan.summary}
-                        </p>
+                      {/* Waypoints Sequence Preview & Summary */}
+                      {!isMinimalMode && (
+                        <>
+                          <div className="flex items-center gap-1 flex-wrap text-[10px]">
+                            <span className="text-slate-400 font-medium">동선 ({plan.waypoints.length}곳):</span>
+                            {plan.waypoints.slice(0, 4).map((wp, wIdx) => (
+                              <span
+                                key={wp.id}
+                                className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200"
+                              >
+                                {wIdx + 1}. {wp.name}
+                              </span>
+                            ))}
+                            {plan.waypoints.length > 4 && (
+                              <span className="text-slate-400 font-medium">
+                                +{plan.waypoints.length - 4}곳
+                              </span>
+                            )}
+                          </div>
+
+                          {plan.summary && (
+                            <p className="text-[11px] text-slate-600 line-clamp-2 bg-slate-50/70 p-1.5 rounded border border-slate-100/70">
+                              {plan.summary}
+                            </p>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
 
-                  {/* Card Action Footer */}
-                  <div
-                    className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* View Course Detail CTA */}
-                    <button
-                      onClick={() => {
-                        onSelectPlan(plan.id);
-                        setViewMode('waypoints');
-                      }}
-                      className="flex items-center gap-1 text-[11px] font-bold text-[#064e3b] hover:text-[#047857] bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
-                    >
-                      <Route className="w-3 h-3 text-[#881337]" />
-                      <span>상세 동선 보기 ({plan.waypoints.length}곳)</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </button>
-
-                    {/* Quick Edit, Fork, Delete buttons */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onEditPlan(plan)}
-                        className="p-1 text-slate-500 hover:text-[#064e3b] hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                        title="코스 제안 정보 편집"
+                      {/* Card Action Footer */}
+                      <div
+                        className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Edit3 className="w-3 h-3" />
-                      </button>
+                        {/* View Course Detail CTA */}
+                        <button
+                          onClick={() => {
+                            onSelectPlan(plan.id);
+                            setViewMode('waypoints');
+                          }}
+                          className="flex items-center gap-1 text-[11px] font-bold text-[#064e3b] hover:text-[#047857] bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Route className="w-3 h-3 text-[#881337]" />
+                          <span>상세 동선 보기 ({plan.waypoints.length}곳)</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
 
-                      <button
-                        onClick={() => onForkPlan(plan)}
-                        className="p-1 text-slate-500 hover:text-[#064e3b] hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                        title="플랜 복사(Fork)"
-                      >
-                        <GitFork className="w-3 h-3" />
-                      </button>
+                        {/* Quick Edit, Fork, Delete buttons */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => onEditPlan(plan)}
+                            className="p-1 text-slate-500 hover:text-[#064e3b] hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                            title="코스 제안 정보 편집"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
 
-                      <button
-                        onClick={() => onDeletePlan(plan.id)}
-                        disabled={plans.length <= 1}
-                        className={`p-1 rounded transition-colors cursor-pointer ${
-                          plans.length <= 1
-                            ? 'text-slate-300 cursor-not-allowed'
-                            : 'text-slate-500 hover:text-[#881337] hover:bg-rose-50'
-                        }`}
-                        title={
-                          plans.length <= 1
-                            ? '최소 1개의 코스 제안이 유지되어야 합니다'
-                            : `'${plan.title}' 삭제`
-                        }
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                          <button
+                            onClick={() => onForkPlan(plan)}
+                            className="p-1 text-slate-500 hover:text-[#064e3b] hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                            title="플랜 복사(Fork)"
+                          >
+                            <GitFork className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            onClick={() => onDeletePlan(plan.id)}
+                            disabled={plans.length <= 1}
+                            className={`p-1 rounded transition-colors cursor-pointer ${
+                              plans.length <= 1
+                                ? 'text-slate-300 cursor-not-allowed'
+                                : 'text-slate-500 hover:text-[#881337] hover:bg-rose-50'
+                            }`}
+                            title={
+                              plans.length <= 1
+                                ? '최소 1개의 코스 제안이 유지되어야 합니다'
+                                : `'${plan.title}' 삭제`
+                            }
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
